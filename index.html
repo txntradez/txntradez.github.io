@@ -1,0 +1,1853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>txntradez — Premium TradingView Indicators</title>
+  <meta name="description" content="Three professional Pine Script indicators for serious traders. One-time $80 access."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:       #07090f;
+      --surface:  #0c0f1a;
+      --surface2: #111526;
+      --border:   rgba(255,255,255,0.06);
+      --border2:  rgba(255,255,255,0.1);
+      --cyan:     #00e5ff;
+      --cyan-dim: rgba(0,229,255,0.12);
+      --green:    #00ff9d;
+      --gold:     #ffc84a;
+      --red:      #ff4d6a;
+      --text:     #eef0f8;
+      --text2:    #7a8299;
+      --text3:    #3a4260;
+      --ff-head:  'Syne', sans-serif;
+      --ff-body:  'DM Sans', sans-serif;
+      --ff-mono:  'DM Mono', monospace;
+      --ease:     cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--ff-body);
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    /* ── CUSTOM CURSOR ── */
+    #cursor {
+      position: fixed;
+      width: 10px; height: 10px;
+      background: var(--cyan);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%,-50%);
+      transition: width 0.2s var(--ease), height 0.2s var(--ease), opacity 0.2s;
+      mix-blend-mode: screen;
+    }
+    #cursor-ring {
+      position: fixed;
+      width: 36px; height: 36px;
+      border: 1px solid rgba(0,229,255,0.4);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9998;
+      transform: translate(-50%,-50%);
+      transition: transform 0.12s var(--ease), width 0.3s var(--ease), height 0.3s var(--ease);
+    }
+    body:hover #cursor { opacity: 1; }
+
+    /* ── CANVAS BG ── */
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.6;
+    }
+
+    /* Vignette so center content stays readable */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, transparent 40%, rgba(7,9,15,0.65) 100%);
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 48px;
+      background: rgba(7,9,15,0.7);
+      backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-family: var(--ff-head);
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-dot {
+      width: 7px; height: 7px;
+      background: var(--green);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--green);
+      animation: breathe 2.5s ease-in-out infinite;
+    }
+
+    @keyframes breathe {
+      0%,100% { opacity:1; transform:scale(1); }
+      50% { opacity:0.4; transform:scale(0.7); }
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 36px;
+    }
+
+    .nav-link {
+      font-family: var(--ff-mono);
+      font-size: 12px;
+      color: var(--text2);
+      text-decoration: none;
+      letter-spacing: 0.06em;
+      transition: color 0.2s;
+    }
+    .nav-link:hover { color: var(--cyan); }
+
+    .nav-btn {
+      font-family: var(--ff-mono);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      color: var(--bg);
+      background: var(--cyan);
+      padding: 9px 22px;
+      border-radius: 2px;
+      text-decoration: none;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .nav-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 140px 24px 100px;
+      overflow: hidden;
+    }
+
+    .hero-eyebrow {
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      margin-bottom: 28px;
+      opacity: 0;
+      animation: rise 1s 0.2s var(--ease) forwards;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .hero-eyebrow::before,
+    .hero-eyebrow::after {
+      content: '';
+      display: block;
+      width: 32px;
+      height: 1px;
+      background: var(--cyan);
+      opacity: 0.4;
+    }
+
+    .hero-h1 {
+      font-family: var(--ff-head);
+      font-size: clamp(36px, 6vw, 72px);
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      text-transform: uppercase;
+      margin-bottom: 36px;
+      opacity: 0;
+      animation: rise 1s 0.35s var(--ease) forwards;
+      position: relative;
+      max-width: 600px;
+    }
+
+    .hero-h1 .line1 {
+      display: block;
+      color: var(--text);
+      position: relative;
+    }
+
+    .hero-h1 .line2 {
+      display: block;
+      position: relative;
+    }
+
+    .hero-h1 .word-build {
+      color: transparent;
+      -webkit-text-stroke: 1.5px rgba(255,255,255,0.18);
+      position: relative;
+    }
+
+    .hero-h1 .word-edge {
+      color: var(--cyan);
+      position: relative;
+      display: inline-block;
+    }
+
+    .hero-h1 .word-edge::after {
+      content: '';
+      position: absolute;
+      bottom: 4px;
+      left: 0; right: 0;
+      height: 3px;
+      background: var(--cyan);
+      opacity: 0.35;
+      border-radius: 2px;
+    }
+
+    .hero-h1 .dot {
+      color: var(--cyan);
+      opacity: 0.6;
+    }
+
+    .hero-p {
+      font-size: 17px;
+      font-weight: 300;
+      color: var(--text2);
+      max-width: 480px;
+      line-height: 1.75;
+      margin-bottom: 52px;
+      opacity: 0;
+      animation: rise 1s 0.5s var(--ease) forwards;
+    }
+
+    .hero-p strong { color: var(--text); font-weight: 500; }
+
+    .hero-ctas {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      flex-wrap: wrap;
+      opacity: 0;
+      animation: rise 1s 0.65s var(--ease) forwards;
+    }
+
+    .btn-main {
+      font-family: var(--ff-head);
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--bg);
+      background: var(--cyan);
+      padding: 16px 40px;
+      border-radius: 2px;
+      text-decoration: none;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s var(--ease);
+    }
+
+    .btn-main::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: white;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .btn-main:hover { transform: translateY(-2px); }
+    .btn-main:hover::after { opacity: 0.1; }
+
+    .btn-ghost {
+      font-family: var(--ff-head);
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text2);
+      background: transparent;
+      padding: 16px 40px;
+      border-radius: 2px;
+      text-decoration: none;
+      border: 1px solid var(--border2);
+      transition: color 0.2s, border-color 0.2s, transform 0.2s var(--ease);
+    }
+
+    .btn-ghost:hover {
+      color: var(--text);
+      border-color: rgba(255,255,255,0.25);
+      transform: translateY(-2px);
+    }
+
+    /* Hero stats strip */
+    .hero-stats {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      display: flex;
+      border-top: 1px solid var(--border);
+      opacity: 0;
+      animation: rise 1s 0.8s var(--ease) forwards;
+    }
+
+    .hstat {
+      flex: 1;
+      padding: 28px 24px;
+      text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .hstat:last-child { border-right: none; }
+
+    .hstat-val {
+      font-family: var(--ff-head);
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .hstat-val span { color: var(--cyan); }
+
+    .hstat-label {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text3);
+    }
+
+    @keyframes rise {
+      from { opacity:0; transform:translateY(20px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+
+    /* ── SECTION WRAPPER ── */
+    .wrap {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 32px;
+    }
+
+    .sec {
+      position: relative;
+      z-index: 1;
+      padding: 120px 0;
+    }
+
+    .sec-label {
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .sec-label::after {
+      content: '';
+      flex: 1;
+      max-width: 48px;
+      height: 1px;
+      background: var(--cyan);
+      opacity: 0.3;
+    }
+
+    .sec-title {
+      font-family: var(--ff-head);
+      font-size: clamp(26px, 3.5vw, 44px);
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      line-height: 1.05;
+      text-transform: uppercase;
+    }
+
+    .sec-title span { color: var(--cyan); }
+
+    /* ── INDICATORS ── */
+    .ind-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-top: 72px;
+    }
+
+    .ind-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-auto-rows: 1fr;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      transition: border-color 0.4s var(--ease);
+      opacity: 0;
+      transform: translateY(32px);
+      transition: opacity 0.7s var(--ease), transform 0.7s var(--ease), border-color 0.3s;
+    }
+
+    .ind-row.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .ind-row:hover { border-color: rgba(0,229,255,0.2); }
+    .ind-row.flip { direction: rtl; }
+    .ind-row.flip > * { direction: ltr; }
+
+    /* Visual pane */
+    .ind-visual {
+      position: relative;
+      min-height: 480px;
+      background: var(--bg);
+      overflow: hidden;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      cursor: zoom-in;
+    }
+
+    .ind-visual img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top;
+      display: block;
+      transition: transform 0.4s var(--ease);
+    }
+
+    .ind-visual:hover img { transform: scale(1.02); }
+
+    .zoom-hint {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      background: rgba(0,0,0,0.7);
+      border: 1px solid rgba(0,229,255,0.2);
+      color: var(--cyan);
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      padding: 5px 10px;
+      border-radius: 3px;
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+    }
+
+    .ind-visual:hover .zoom-hint { opacity: 1; }
+
+    /* ── LIGHTBOX ── */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(0,0,0,0.95);
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      backdrop-filter: blur(10px);
+    }
+
+    .lightbox.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .lb-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      background: rgba(0,0,0,0.6);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .lb-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .lb-btn {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      font-family: var(--ff-mono);
+      font-size: 14px;
+      padding: 6px 14px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      letter-spacing: 0.05em;
+    }
+
+    .lb-btn:hover { background: rgba(0,229,255,0.1); color: var(--cyan); border-color: rgba(0,229,255,0.3); }
+
+    .lb-pct {
+      font-family: var(--ff-mono);
+      font-size: 12px;
+      color: var(--cyan);
+      min-width: 44px;
+      text-align: center;
+      letter-spacing: 0.08em;
+    }
+
+    .lb-reset { font-size: 12px; letter-spacing: 0.08em; }
+    .lb-close-btn { font-size: 12px; letter-spacing: 0.08em; }
+
+    .lb-hint {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      color: var(--text3);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .lb-img-wrap {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    #lightbox-img {
+      max-width: 95%;
+      max-height: 95%;
+      object-fit: contain;
+      transform-origin: center center;
+      border-radius: 3px;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    .ind-visual svg {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+    }
+
+
+    /* Info pane */
+    .ind-info {
+      padding: 52px 56px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .ind-num {
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      color: var(--text3);
+      letter-spacing: 0.14em;
+      margin-bottom: 18px;
+    }
+
+    .ind-name {
+      font-family: var(--ff-head);
+      font-size: clamp(26px, 3vw, 40px);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: -0.01em;
+      line-height: 1.05;
+      margin-bottom: 6px;
+    }
+
+    .ind-name em {
+      font-style: normal;
+      color: var(--cyan);
+    }
+
+    .ind-handle {
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      color: var(--green);
+      letter-spacing: 0.1em;
+      margin-bottom: 28px;
+      opacity: 0.7;
+    }
+
+    .ind-desc {
+      font-size: 14px;
+      font-weight: 300;
+      color: var(--text2);
+      line-height: 1.85;
+      margin-bottom: 32px;
+    }
+
+    .feat-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .feat-list li {
+      font-size: 13px;
+      color: var(--text2);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      line-height: 1.5;
+    }
+
+    .feat-list li::before {
+      content: '→';
+      color: var(--cyan);
+      font-size: 11px;
+      flex-shrink: 0;
+      margin-top: 1px;
+      opacity: 0.7;
+    }
+
+    /* ── HOW IT WORKS ── */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(4,1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-top: 72px;
+    }
+
+    .step {
+      background: var(--surface);
+      padding: 44px 32px;
+      position: relative;
+      transition: background 0.3s;
+    }
+
+    .step:hover { background: var(--surface2); }
+
+    .step-n {
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      color: var(--cyan);
+      letter-spacing: 0.12em;
+      margin-bottom: 20px;
+      opacity: 0.7;
+    }
+
+    .step-title {
+      font-family: var(--ff-head);
+      font-size: 17px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 12px;
+    }
+
+    .step-desc {
+      font-size: 13px;
+      color: var(--text2);
+      line-height: 1.7;
+      font-weight: 300;
+    }
+
+    .step-desc strong { color: var(--cyan); font-weight: 500; }
+
+    /* ── PRICING ── */
+    .pricing-wrap {
+      margin-top: 72px;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 2px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .pricing-left {
+      background: var(--surface);
+      padding: 64px 56px;
+    }
+
+    .price-tag {
+      font-family: var(--ff-head);
+      font-size: 96px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      margin: 24px 0 8px;
+    }
+
+    .price-tag sup {
+      font-size: 40px;
+      color: var(--cyan);
+      vertical-align: top;
+      margin-top: 16px;
+      display: inline-block;
+    }
+
+    .price-term {
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 48px;
+    }
+
+    .price-includes {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .pi {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+      color: var(--text2);
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .pi:last-child { border-bottom: none; }
+
+    .pi-check {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: rgba(0,255,157,0.1);
+      border: 1px solid rgba(0,255,157,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 10px;
+      color: var(--green);
+    }
+
+    .pricing-right {
+      background: var(--surface2);
+      padding: 64px 48px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      gap: 24px;
+    }
+
+    .venmo-badge {
+      width: 56px; height: 56px;
+      background: #008CFF;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--ff-head);
+      font-size: 22px;
+      font-weight: 800;
+      color: white;
+    }
+
+    .venmo-handle-big {
+      font-family: var(--ff-mono);
+      font-size: 22px;
+      font-weight: 500;
+      color: var(--text);
+      letter-spacing: 0.04em;
+      background: rgba(0,140,255,0.08);
+      border: 1px solid rgba(0,140,255,0.15);
+      padding: 14px 28px;
+      border-radius: 4px;
+      width: 100%;
+    }
+
+    .venmo-note {
+      font-size: 13px;
+      color: var(--text2);
+      line-height: 1.7;
+      font-weight: 300;
+    }
+
+    .venmo-note strong { color: var(--cyan); font-weight: 500; }
+
+    /* ── PAYMENT STEPS ── */
+    .pay-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-top: 72px;
+    }
+
+    .pay-step {
+      background: var(--surface);
+      padding: 28px 36px;
+      display: flex;
+      align-items: flex-start;
+      gap: 24px;
+      transition: background 0.2s;
+    }
+
+    .pay-step:hover { background: var(--surface2); }
+
+    .pay-n {
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      color: var(--cyan);
+      opacity: 0.6;
+      letter-spacing: 0.1em;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .pay-text {
+      font-size: 14px;
+      color: var(--text2);
+      line-height: 1.65;
+      font-weight: 300;
+    }
+
+    .pay-text strong { color: var(--text); font-weight: 500; }
+
+    /* ── WARNING BOX ── */
+    .warn-box {
+      display: flex;
+      gap: 16px;
+      padding: 20px 24px;
+      background: rgba(255,196,74,0.05);
+      border: 1px solid rgba(255,196,74,0.15);
+      border-radius: 4px;
+      margin-top: 20px;
+    }
+
+    .warn-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+    .warn-text {
+      font-size: 13px;
+      color: var(--text2);
+      line-height: 1.7;
+      font-weight: 300;
+    }
+
+    .warn-text strong { color: var(--gold); font-weight: 500; }
+
+    /* ── FAQ ── */
+    .faq-list {
+      margin-top: 72px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .faq-item {
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .faq-item:last-child { border-bottom: none; }
+
+    .faq-q {
+      width: 100%;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-family: var(--ff-head);
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-align: left;
+      padding: 26px 36px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 24px;
+      transition: background 0.2s;
+    }
+
+    .faq-q:hover { background: var(--surface2); }
+
+    .faq-icon {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      border: 1px solid var(--border2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      color: var(--cyan);
+      flex-shrink: 0;
+      transition: transform 0.3s var(--ease), background 0.2s;
+    }
+
+    .faq-item.open .faq-icon {
+      transform: rotate(45deg);
+      background: var(--cyan-dim);
+    }
+
+    .faq-a {
+      font-size: 14px;
+      color: var(--text2);
+      line-height: 1.8;
+      font-weight: 300;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s var(--ease), padding 0.3s;
+      padding: 0 36px;
+    }
+
+    .faq-item.open .faq-a {
+      max-height: 300px;
+      padding: 0 36px 28px;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--border);
+      padding: 56px 48px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+      text-align: center;
+    }
+
+    .footer-logo {
+      font-family: var(--ff-head);
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text2);
+    }
+
+    .footer-disc {
+      font-size: 12px;
+      color: var(--text3);
+      max-width: 480px;
+      line-height: 1.7;
+      text-align: center;
+    }
+
+    .footer-right {
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      color: var(--text3);
+      letter-spacing: 0.08em;
+    }
+
+    /* ── DIVIDER ── */
+    hr.div {
+      border: none;
+      border-top: 1px solid var(--border);
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    /* ── SCROLL REVEAL ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.7s var(--ease), transform 0.7s var(--ease);
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      nav { padding: 0 24px; }
+      .nav-right .nav-link { display: none; }
+      .ind-row { grid-template-columns: 1fr; }
+      .ind-row.flip { direction: ltr; }
+      .ind-info { padding: 36px 28px; }
+      .pricing-wrap { grid-template-columns: 1fr; }
+      .steps { grid-template-columns: 1fr 1fr; }
+      .hero-stats { position: relative; border-top: 1px solid var(--border); }
+      footer { flex-direction: column; text-align: center; }
+      .footer-disc { text-align: center; }
+    }
+    /* ── ABOUT ── */
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.6fr;
+      gap: 80px;
+      align-items: start;
+    }
+
+    .about-left { position: sticky; top: 100px; }
+
+    .about-tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 28px;
+    }
+
+    .about-tag {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text3);
+      border: 1px solid var(--border);
+      padding: 5px 12px;
+      border-radius: 2px;
+    }
+
+    .about-right {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .about-right p {
+      font-size: 15px;
+      color: var(--text2);
+      line-height: 1.85;
+      font-weight: 300;
+    }
+
+    .about-right p:first-child {
+      font-size: 16px;
+      color: var(--text);
+    }
+
+    /* ── DM BOX ── */
+    .dm-box {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      padding: 32px 36px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      margin-top: 20px;
+    }
+
+    .dm-icon { font-size: 24px; flex-shrink: 0; margin-top: 2px; }
+
+    .dm-title {
+      font-family: var(--ff-head);
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .dm-text {
+      font-size: 14px;
+      color: var(--text2);
+      line-height: 1.65;
+      font-weight: 300;
+    }
+
+    @media (max-width: 900px) {
+      .about-grid { grid-template-columns: 1fr; gap: 40px; }
+      .about-left { position: static; }
+    }
+
+    /* ── HERO CHART ── */
+    .hero-chart-wrap {
+      margin-top: 80px;
+    }
+
+    .hero-chart-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .hero-chart-tag {
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      opacity: 0.8;
+    }
+
+    .hero-chart-sub {
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text3);
+    }
+
+    .hero-chart-img {
+      position: relative;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      cursor: zoom-in;
+      transition: border-color 0.3s;
+    }
+
+    .hero-chart-img:hover { border-color: rgba(0,229,255,0.25); }
+
+    .hero-chart-img img {
+      width: 100%;
+      display: block;
+      object-fit: cover;
+      transition: transform 0.4s var(--ease);
+    }
+
+    .hero-chart-img:hover img { transform: scale(1.01); }
+    .hero-chart-img:hover .zoom-hint { opacity: 1; }
+
+    /* ── TV LINK ── */
+    .tv-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 28px;
+      font-family: var(--ff-mono);
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      color: var(--cyan);
+      text-decoration: none;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+    .tv-link:hover { opacity: 1; }
+
+    /* ── SOCIAL LINKS ── */
+    .footer-socials {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .social-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--ff-mono);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      color: var(--text3);
+      text-decoration: none;
+      padding: 8px 16px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .social-link:hover {
+      color: var(--cyan);
+      border-color: rgba(0,229,255,0.25);
+    }
+
+  </style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<!-- NAV -->
+<nav>
+  <a class="logo" href="#">
+    <span class="logo-dot"></span>
+    txntradez
+  </a>
+  <div class="nav-right">
+    <a class="nav-link" href="#indicators">Indicators</a>
+    <a class="nav-link" href="#about">About</a>
+    <a class="nav-link" href="#pricing">Pricing</a>
+    <a class="nav-link" href="#faq">FAQ</a>
+    <a class="nav-btn" href="#pricing">Get Access — $80</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">Institutional Grade ICT Indicators</div>
+  <h1 class="hero-h1">
+    <span class="line1">See the Market<span class="dot">.</span></span>
+    <span class="line2"><span class="word-build">Build Your</span> <span class="word-edge">Edge</span><span class="dot">.</span></span>
+  </h1>
+  <p class="hero-p">
+    Three indicators built to change how you see the market. Spot your own opportunities, trade on your own terms, and build an edge that actually belongs to you.
+  </p>
+  <div class="hero-ctas">
+    <a class="btn-main" href="#indicators">Explore Indicators</a>
+    <a class="btn-ghost" href="#pricing">Get Access — $80</a>
+  </div>
+  <div class="hero-stats">
+    <div class="hstat">
+      <div class="hstat-val">3</div>
+      <div class="hstat-label">Premium Scripts</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-val"><span>$</span>80</div>
+      <div class="hstat-label">One-Time Fee</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-val">∞</div>
+      <div class="hstat-label">Lifetime Access</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-val">
+        <svg width="36" height="28" viewBox="0 0 36 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="18" width="5" height="10" fill="currentColor" opacity="0.4" rx="1"/>
+          <rect x="7" y="10" width="5" height="18" fill="currentColor" opacity="0.6" rx="1"/>
+          <rect x="14" y="14" width="5" height="14" fill="currentColor" opacity="0.5" rx="1"/>
+          <rect x="21" y="4" width="5" height="24" fill="currentColor" rx="1"/>
+          <rect x="28" y="8" width="5" height="20" fill="currentColor" opacity="0.7" rx="1"/>
+        </svg>
+      </div>
+      <div class="hstat-label">TradingView Ready</div>
+    </div>
+  </div>
+</section>
+
+<section style="position:relative;z-index:1;padding:0 0 0 0;">
+  <div style="max-width:1180px;margin:0 auto;padding:0 32px;">
+    <div class="hero-chart-wrap reveal">
+      <div class="hero-chart-label">
+        <span class="hero-chart-tag">Session+ · NWOG/NDOG+ · PFVG+</span>
+        <span class="hero-chart-sub">All 3 indicators. One chart.</span>
+      </div>
+      <div class="hero-chart-img" onclick="openLightbox(this.querySelector('img').src)">
+        <img src="session.png" alt="All 3 txntradez indicators on one chart">
+        <div class="zoom-hint">⊕ CLICK TO EXPAND</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="div" style="margin-top:80px;">
+
+<!-- INDICATORS -->
+<section class="sec" id="indicators">
+  <div class="wrap">
+    <div class="sec-label">The Suite</div>
+    <h2 class="sec-title">Three Scripts.<br><span>One Vision.</span></h2>
+    <div class="ind-grid">
+
+      <!-- 01 Session+ -->
+      <div class="ind-row reveal">
+        <div class="ind-visual" style="background:#0a0a0a;" onclick="openLightbox(this.querySelector('img').src)">
+          <img src="nwog-ndog.png" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;" alt="Session+ Indicator on TradingView">
+          <div class="zoom-hint">⊕ CLICK TO EXPAND</div>
+        </div>
+        <div class="ind-info">
+          <div class="ind-num">// 01 of 03</div>
+          <h3 class="ind-name">Session<em>+</em></h3>
+          <div class="ind-handle">@txntradez · Invite Only</div>
+          <p class="ind-desc">Session+ maps every major trading session directly on your chart so you always know where you are in time. Seven sessions, key institutional windows, and the levels that matter — all plotted automatically.</p>
+          <ul class="feat-list">
+            <li>Tracks 7 distinct trading sessions including Asia, London, and New York with automatic high, low, and 50% equilibrium levels</li>
+            <li>Highlights Silver Bullet windows during London, NY AM, and NY PM for identifying peak institutional order flow periods</li>
+            <li>Maps Buy Side and Sell Side liquidity levels so you always know where stop clusters are resting</li>
+            <li>Plots the Opening Range Gap between prior session close and market open with premium and discount bias detection</li>
+            <li>Displays key institutional reference price levels that act as magnets for price reactions throughout the session</li>
+          </ul>
+          <a href="https://www.tradingview.com/script/uxHdOPoN-Session-txntradez/" target="_blank" class="tv-link" rel="noopener noreferrer">View on TradingView →</a>
+        </div>
+      </div>
+
+      <!-- 02 NWOG/NDOG+ -->
+      <div class="ind-row flip reveal" style="transition-delay:0.1s">
+        <div class="ind-visual" style="background:#0a0a0a;" onclick="openLightbox(this.querySelector('img').src)">
+          <img src="pfvg.png" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;" alt="NWOG/NDOG+ Indicator on TradingView">
+          <div class="zoom-hint">⊕ CLICK TO EXPAND</div>
+        </div>
+        <div class="ind-info">
+          <div class="ind-num">// 02 of 03</div>
+          <h3 class="ind-name">NWOG / NDOG<em>+</em></h3>
+          <div class="ind-handle">@txntradez · Invite Only</div>
+          <p class="ind-desc">NWOG/NDOG+ automatically tracks New Day and New Week Opening Gaps — the price inefficiencies left behind when markets close and reopen. It shows you where those gaps sit, how price is interacting with them, and which ones are still unfilled.</p>
+          <ul class="feat-list">
+            <li>Automatically detects and plots New Week and New Day Opening Gaps across daily and weekly transitions</li>
+            <li>Classifies each gap as Premium or Discount with built in bullish and bearish fill bias so you always know what price is likely targeting</li>
+            <li>Tracks real time fill percentage so you can monitor how price is interacting with each gap as it develops</li>
+            <li>Displays internal 50% equilibrium, 25% and 75% fibonacci levels within each gap for identifying precise reaction zones</li>
+            <li>Historical analytics track interaction count, fill rate, and reaction strength across past gaps so you can study recurring patterns</li>
+          </ul>
+          <a href="https://www.tradingview.com/script/TBdakKor-ICT-NWOG-NDOG-txntradez/" target="_blank" class="tv-link" rel="noopener noreferrer">View on TradingView →</a>
+        </div>
+      </div>
+
+      <!-- 03 PFVG+ -->
+      <div class="ind-row reveal" style="transition-delay:0.2s">
+        <div class="ind-visual" style="background:#0a0a0a;" onclick="openLightbox(this.querySelector('img').src)">
+          <img src="all-indicators.png" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;" alt="PFVG+ Indicator on TradingView">
+          <div class="zoom-hint">⊕ CLICK TO EXPAND</div>
+        </div>
+        <div class="ind-info">
+          <div class="ind-num">// 03 of 03</div>
+          <h3 class="ind-name">PFVG<em>+</em></h3>
+          <div class="ind-handle">@txntradez · Invite Only</div>
+          <p class="ind-desc">PFVG+ tracks the first Fair Value Gap that forms inside each trading session and marks it as your reference zone for that period. Every session gets its own gap — so you always have a clean level to work from.</p>
+          <ul class="feat-list">
+            <li>Tracks the first Fair Value Gap that forms within each major trading session including Asia, London, Pre Market, NY AM, NY Lunch, NY PM, and Midnight, giving you a session specific reference zone for the day</li>
+            <li>Classifies each gap as Bullish (BISI) or Bearish (SIBI) and displays internal 50% equilibrium, 25% and 75% fibonacci levels for identifying precise interaction zones within the gap</li>
+            <li>Volume Imbalance Extension refines gap boundaries using candle body separation rather than just wicks, creating more accurate zones that reflect true price imbalances</li>
+            <li>Dynamic highlighting automatically boosts gap visibility in real time when price enters a zone so you never miss an active interaction</li>
+            <li>Status table tracks current and previous gap interactions across all sessions with time elapsed so you always know which session gaps price is engaging with</li>
+          </ul>
+          <a href="https://www.tradingview.com/script/xVJmzunY-ICT-PFVG-txntradez/" target="_blank" class="tv-link" rel="noopener noreferrer">View on TradingView →</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<hr class="div">
+
+<!-- ABOUT -->
+<section class="sec" id="about">
+  <div class="wrap">
+    <div class="about-grid reveal">
+      <div class="about-left">
+        <div class="sec-label">About</div>
+        <h2 class="sec-title">The Trader<br><span>Behind the Tools</span></h2>
+        <div class="about-tag-row">
+          <span class="about-tag">ICT Trader</span>
+          <span class="about-tag">CS Grad 2025</span>
+          <span class="about-tag">Former Team USA Swimmer</span>
+          <span class="about-tag">Futures</span>
+        </div>
+      </div>
+      <div class="about-right">
+        <p>I started learning ICT in September 2023 and that's all I've ever studied. Never jumped around to different strategies, just locked in on ICT concepts and applied them to the futures market.</p>
+        <p>The indicators honestly came out of frustration. I was spending so much time manually plotting everything, sessions, gaps, fair value gaps, that it was taking away from actually trading. I'm a CS grad, been coding since 2021, so I just built what I needed. Then realized other traders were probably dealing with the same thing.</p>
+        <p>Growing up I swam competitively for Team USA club. Early mornings, same drills every day, grinding even when you don't feel like it, that's just how I'm wired. Trading hit me the same way. It's a challenge and I don't back down from those.</p>
+        <p>Big thank you to Michael J. Huddleston for everything he has put out freely. These scripts were built with one goal in mind, helping you see the market through time first, then price. That perspective alone can change how any trader reads the market, whether you use ICT or not. I've put serious work into these and I genuinely believe in what they do. Now it's your turn to see the market and build your edge.</p>
+        <a href="https://www.tradingview.com/u/txntradez/" target="_blank" class="tv-link" style="margin-top:24px;" rel="noopener noreferrer">Find me on TradingView →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="div">
+
+<!-- HOW IT WORKS -->
+<section class="sec" id="how-it-works">
+  <div class="wrap">
+    <div class="sec-label">How It Works</div>
+    <h2 class="sec-title reveal">Getting Access</h2>
+    <div class="steps reveal">
+      <div class="step">
+        <div class="step-n">01 —</div>
+        <div class="step-title">Send Payment</div>
+        <p class="step-desc">Send <strong>$80</strong> via Venmo to <strong>@txntradez</strong></p>
+      </div>
+      <div class="step">
+        <div class="step-n">02 —</div>
+        <div class="step-title">Add Your Username</div>
+        <p class="step-desc">Include your <strong>TradingView username</strong> in the memo field</p>
+      </div>
+      <div class="step">
+        <div class="step-n">03 —</div>
+        <div class="step-title">Receive Invite</div>
+        <p class="step-desc">Access granted within <strong>24 hours</strong> to all 3 scripts</p>
+      </div>
+      <div class="step">
+        <div class="step-n">04 —</div>
+        <div class="step-title">Start Trading</div>
+        <p class="step-desc">Add all 3 to your chart and start seeing the market differently</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="div">
+
+<!-- PRICING -->
+<section class="sec" id="pricing">
+  <div class="wrap">
+    <div class="sec-label">Investment</div>
+    <h2 class="sec-title reveal">One Price. All Three.</h2>
+    <div class="pricing-wrap reveal">
+      <div class="pricing-left">
+        <div class="sec-label" style="margin-bottom:0">Complete Access</div>
+        <div class="price-tag"><sup>$</sup>80</div>
+        <div class="price-term">One-Time · No Subscription · Lifetime Access</div>
+        <div class="price-includes">
+          <div class="pi"><span class="pi-check">✓</span> Session+ Indicator</div>
+          <div class="pi"><span class="pi-check">✓</span> NWOG / NDOG+ Indicator</div>
+          <div class="pi"><span class="pi-check">✓</span> PFVG+ Indicator</div>
+          <div class="pi"><span class="pi-check">✓</span> All Future Updates Included</div>
+          <div class="pi"><span class="pi-check">✓</span> TradingView Invite Access</div>
+          <div class="pi"><span class="pi-check">✓</span> Use On Any Chart or Instrument</div>
+        </div>
+      </div>
+      <div class="pricing-right">
+        <div class="venmo-badge">V</div>
+        <div style="font-family:var(--ff-head);font-size:13px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text2);">Pay via Venmo</div>
+        <div class="venmo-handle-big">@txntradez</div>
+        <p class="venmo-note">Include your <strong>TradingView username</strong> in the memo — access granted within 24 hours.</p>
+        <a href="https://venmo.com/txntradez" target="_blank" class="btn-main" style="width:100%;text-align:center;display:block;padding:16px;" rel="noopener noreferrer">Open Venmo</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="div">
+
+<!-- PAYMENT DETAILS -->
+<section class="sec" id="payment">
+  <div class="wrap">
+    <div class="sec-label">How to Pay</div>
+    <h2 class="sec-title reveal">Four Simple Steps</h2>
+    <div class="pay-steps reveal">
+      <div class="pay-step">
+        <span class="pay-n">01</span>
+        <span class="pay-text">Open Venmo and search for <strong>@txntradez</strong> — make sure you select the business account</span>
+      </div>
+      <div class="pay-step">
+        <span class="pay-n">02</span>
+        <span class="pay-text">Send exactly <strong>$80.00</strong> as the payment amount</span>
+      </div>
+      <div class="pay-step">
+        <span class="pay-n">03</span>
+        <span class="pay-text">In the memo/note field, type your <strong>TradingView username</strong> — this is required to grant access</span>
+      </div>
+      <div class="pay-step">
+        <span class="pay-n">04</span>
+        <span class="pay-text">Access to all 3 indicators will be granted within <strong>24 hours</strong> — check your TradingView notifications</span>
+      </div>
+    </div>
+    <div class="warn-box reveal">
+      <span class="warn-icon">⚠</span>
+      <p class="warn-text"><strong>Important:</strong> Make sure to include your TradingView username in the memo. Without it there's no way to know who to invite. If anything goes wrong, just DM <strong>@txntradez</strong> on TradingView with your payment confirmation.</p>
+    </div>
+    <div class="dm-box reveal">
+      <div class="dm-icon">💬</div>
+      <div>
+        <div class="dm-title">Have a question, recommendation, or concern?</div>
+        <p class="dm-text">Send me a DM on TradingView. I check them regularly and reply to everyone personally.</p>
+        <a href="https://www.tradingview.com/u/txntradez/" target="_blank" class="btn-main" style="display:inline-flex;margin-top:16px;padding:12px 28px;font-size:13px;" rel="noopener noreferrer">DM me on TradingView →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="div">
+
+<!-- FAQ -->
+<section class="sec" id="faq">
+  <div class="wrap">
+    <div class="sec-label">FAQ</div>
+    <h2 class="sec-title reveal">Common Questions</h2>
+    <div class="faq-list reveal">
+      <div class="faq-item">
+        <button class="faq-q">Do I need a paid TradingView plan? <span class="faq-icon">+</span></button>
+        <div class="faq-a">No. These indicators work with a free TradingView account. Once your Venmo payment goes through, you'll be invited to all 3 scripts within 24 hours.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">How long until I get access after paying? <span class="faq-icon">+</span></button>
+        <div class="faq-a">Usually within 24 hours. You'll get a TradingView notification once the invite is sent. If you haven't heard back after 24 hours, just DM @txntradez on TradingView with your payment confirmation and I'll sort it out.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">What markets do these indicators work on? <span class="faq-icon">+</span></button>
+        <div class="faq-a">All three work on any market TradingView supports — futures (ES, NQ, MNQ), stocks, forex, crypto, and more. Any timeframe too.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Is this a subscription or one-time payment? <span class="faq-icon">+</span></button>
+        <div class="faq-a">One-time payment. Pay $80 once and you're in for life — all 3 scripts, all future updates included. No subscriptions, no renewals.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Can I share the indicators with others? <span class="faq-icon">+</span></button>
+        <div class="faq-a">No. These are invite-only private scripts tied to your TradingView account. Access can't be transferred or shared. Anyone who wants access needs their own purchase.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">What trading style are these built for? <span class="faq-icon">+</span></button>
+        <div class="faq-a">These are built around ICT concepts — sessions, liquidity, order flow, and fair value gaps. They work best for day traders and scalpers on the 1m to 15m timeframes, but honestly any trader who wants to understand time and price better will find value in them.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">txntradez</div>
+  <p class="footer-disc">Trading involves real risk. These indicators are educational tools for technical analysis only and are not financial advice. Past performance never guarantees future results.</p>
+  <div class="footer-socials">
+    <a href="https://twitter.com/txntradez" target="_blank" class="social-link" rel="noopener noreferrer">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      @txntradez
+    </a>
+    <a href="https://youtube.com/@txntradez" target="_blank" class="social-link" rel="noopener noreferrer">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+      @txntradez
+    </a>
+    <a href="https://www.tradingview.com/u/txntradez/" target="_blank" class="social-link" rel="noopener noreferrer">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v2H4zm0 4h10v2H4zm0 4h16v2H4zm0 4h10v2H4z"/></svg>
+      TradingView
+    </a>
+  </div>
+  <div class="footer-right">© 2026 txntradez</div>
+</footer>
+
+<script>
+  // Custom cursor
+  const cur = document.getElementById('cursor');
+  const ring = document.getElementById('cursor-ring');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+
+  document.addEventListener('mousemove', e => {
+    mx = e.clientX; my = e.clientY;
+    cur.style.left = mx + 'px';
+    cur.style.top  = my + 'px';
+  });
+
+  function lerpCursor() {
+    rx += (mx - rx) * 0.12;
+    ry += (my - ry) * 0.12;
+    ring.style.left = rx + 'px';
+    ring.style.top  = ry + 'px';
+    requestAnimationFrame(lerpCursor);
+  }
+  lerpCursor();
+
+  document.querySelectorAll('a,button').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      cur.style.width = '20px'; cur.style.height = '20px';
+      ring.style.width = '56px'; ring.style.height = '56px';
+    });
+    el.addEventListener('mouseleave', () => {
+      cur.style.width = '10px'; cur.style.height = '10px';
+      ring.style.width = '36px'; ring.style.height = '36px';
+    });
+  });
+
+  // ── CLEAN CANDLESTICK BACKGROUND ──
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', () => { resize(); buildScene(); });
+
+  const R = (a, b) => a + Math.random() * (b - a);
+
+  // Two clean layers only — subtle back, refined front
+  const LAYERS = [
+    { candleW: 6,  gap: 52, speed: 0.3,  minOp: 0.02, maxOp: 0.045, minH: 8,  maxH: 36, wickMult: 0.5 },
+    { candleW: 10, gap: 72, speed: 0.55, minOp: 0.04, maxOp: 0.08,  minH: 18, maxH: 62, wickMult: 0.9 },
+  ];
+
+  let scene = [];
+
+  function buildScene() {
+    scene = [];
+    LAYERS.forEach(lyr => {
+      const colCount = Math.ceil(W / (lyr.candleW + lyr.gap)) + 2;
+      for (let c = 0; c < colCount; c++) {
+        const col = { x: c * (lyr.candleW + lyr.gap), candles: [], totalH: 0, startY: R(-H, 0), layer: lyr };
+        let y = 0;
+        while (y < H * 3.5) {
+          const bodyH   = R(lyr.minH, lyr.maxH);
+          const wickTop = R(3, 18 * lyr.wickMult);
+          const wickBot = R(2, 12 * lyr.wickMult);
+          const gap     = R(16, 40);
+          col.candles.push({
+            isBull: Math.random() > 0.44,
+            bodyH, wickTop, wickBot,
+            relY: y,
+            phase: R(0, Math.PI * 2)
+          });
+          y += bodyH + wickTop + wickBot + gap;
+        }
+        col.totalH = y;
+        scene.push(col);
+      }
+    });
+  }
+  buildScene();
+
+  // Clean horizontal reference lines — very few, very faint
+  const HLINES = Array.from({ length: 5 }, (_, i) => ({
+    y: H * (0.15 + i * 0.18),
+    opacity: R(0.02, 0.04),
+    speed: R(0.003, 0.007) * (Math.random() > 0.5 ? 1 : -1),
+    xStart: R(0, W * 0.3),
+    width: R(W * 0.3, W * 0.6),
+  }));
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    const t = performance.now() * 0.001;
+
+    // Horizontal lines — ultra faint dashes
+    ctx.setLineDash([4, 18]);
+    HLINES.forEach(l => {
+      l.y += l.speed;
+      if (l.y > H + 5) l.y = -5;
+      if (l.y < -5) l.y = H + 5;
+      ctx.strokeStyle = `rgba(0,229,255,${l.opacity})`;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(l.xStart, l.y);
+      ctx.lineTo(l.xStart + l.width, l.y);
+      ctx.stroke();
+    });
+    ctx.setLineDash([]);
+
+    // Candles — back layer first then front
+    LAYERS.forEach(lyr => {
+      scene.filter(c => c.layer === lyr).forEach(col => {
+        const scrollY = (t * lyr.speed * 55) % col.totalH;
+        col.candles.forEach(c => {
+          let y = col.startY + c.relY - scrollY;
+          if (y > H + 120) y -= col.totalH;
+          const bottom = y + c.wickTop + c.bodyH + c.wickBot;
+          if (bottom < -80 || y > H + 120) return;
+
+          // Gentle opacity breath — very subtle
+          const breath  = 0.85 + 0.15 * Math.sin(t * 0.4 + c.phase);
+          const opacity = R(lyr.minOp, lyr.maxOp) * breath;
+          const cx      = col.x + lyr.candleW / 2;
+          const color   = c.isBull
+            ? `rgba(0,229,255,${opacity})`
+            : `rgba(255,77,106,${opacity * 0.85})`;
+
+          // Wick — clean single line
+          ctx.strokeStyle = color;
+          ctx.lineWidth   = 0.75;
+          ctx.beginPath();
+          ctx.moveTo(cx, y);
+          ctx.lineTo(cx, bottom);
+          ctx.stroke();
+
+          // Body — clean flat fill, no glow
+          ctx.fillStyle = color;
+          ctx.fillRect(col.x, y + c.wickTop, lyr.candleW, c.bodyH);
+        });
+      });
+    });
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+
+  // Scroll reveal
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.reveal, .ind-row').forEach(el => obs.observe(el));
+
+  // FAQ
+  document.querySelectorAll('.faq-q').forEach(q => {
+    q.addEventListener('click', () => {
+      const item = q.parentElement;
+      const open = item.classList.contains('open');
+      document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+      if (!open) item.classList.add('open');
+    });
+  });
+
+
+
+  // Lightbox with smooth pan & zoom
+  let lbScale = 1, lbX = 0, lbY = 0;
+  let isDragging = false;
+  const MIN_SCALE = 1, MAX_SCALE = 8;
+
+  function openLightbox(src) {
+    const lb = document.getElementById('lightbox');
+    const img = document.getElementById('lightbox-img');
+    img.src = src;
+    lbScale = 1; lbX = 0; lbY = 0;
+    applyTransform(true);
+    lb.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    updateZoomBtns();
+  }
+
+  function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function applyTransform(instant) {
+    const img = document.getElementById('lightbox-img');
+    if (!img) return;
+    img.style.transition = instant ? 'none' : 'transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+    img.style.transform = `translate(${lbX}px, ${lbY}px) scale(${lbScale})`;
+    img.style.cursor = lbScale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default';
+    updateZoomBtns();
+  }
+
+  function smoothZoomTo(newScale, originX, originY) {
+    newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, newScale));
+    if (newScale === lbScale) return;
+    const ratio = newScale / lbScale;
+    if (newScale > 1 && originX !== undefined) {
+      lbX = originX - ratio * (originX - lbX);
+      lbY = originY - ratio * (originY - lbY);
+    } else {
+      lbX = lbX * ratio;
+      lbY = lbY * ratio;
+    }
+    if (newScale <= 1) { lbX = 0; lbY = 0; }
+    lbScale = newScale;
+    applyTransform(false);
+  }
+
+  function updateZoomBtns() {
+    const pct = document.getElementById('lb-zoom-pct');
+    if (pct) pct.textContent = Math.round(lbScale * 100) + '%';
+  }
+
+  function lbZoomIn()  { smoothZoomTo(lbScale + 0.5); }
+  function lbZoomOut() { smoothZoomTo(lbScale - 0.5); }
+  function lbReset()   { lbScale = 1; lbX = 0; lbY = 0; applyTransform(false); }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const lb = document.getElementById('lightbox');
+    const lbImg = document.getElementById('lightbox-img');
+    if (!lb || !lbImg) return;
+
+    // Scroll wheel zoom toward cursor
+    lb.addEventListener('wheel', e => {
+      if (!lb.classList.contains('open')) return;
+      e.preventDefault();
+      const rect = lbImg.getBoundingClientRect();
+      const originX = e.clientX - rect.left - rect.width / 2;
+      const originY = e.clientY - rect.top - rect.height / 2;
+      const delta = e.deltaY < 0 ? 0.15 : -0.15;
+      smoothZoomTo(lbScale + delta, originX, originY);
+    }, { passive: false });
+
+    // Click and hold to drag/pan
+    lbImg.addEventListener('mousedown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const startLbX = lbX;
+      const startLbY = lbY;
+      isDragging = false;
+
+      const onMove = e => {
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        if (!isDragging && (Math.abs(dx) > 2 || Math.abs(dy) > 2)) {
+          isDragging = true;
+          lbImg.style.transition = 'none';
+          lbImg.style.cursor = 'grabbing';
+        }
+        if (!isDragging) return;
+        lbX = startLbX + dx;
+        lbY = startLbY + dy;
+        lbImg.style.transform = `translate(${lbX}px, ${lbY}px) scale(${lbScale})`;
+      };
+
+      const onUp = () => {
+        lbImg.style.cursor = lbScale > 1 ? 'grab' : 'default';
+        isDragging = false;
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      };
+
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+
+    // Click backdrop to close
+    lb.addEventListener('click', e => {
+      if (e.target === lb || e.target === lb.querySelector('.lb-img-wrap')) {
+        lbReset();
+        closeLightbox();
+      }
+    });
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeLightbox();
+    if (e.key === '+' || e.key === '=') lbZoomIn();
+    if (e.key === '-') lbZoomOut();
+    if (e.key === '0') lbReset();
+  });
+</script>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox">
+  <div class="lb-toolbar">
+    <div class="lb-controls">
+      <button class="lb-btn" onclick="lbZoomOut()">−</button>
+      <span id="lb-zoom-pct" class="lb-pct">100%</span>
+      <button class="lb-btn" onclick="lbZoomIn()">+</button>
+      <button class="lb-btn lb-reset" onclick="lbReset()">Reset</button>
+    </div>
+    <div class="lb-hint">Scroll to zoom · Click & drag to pan · Click outside to close</div>
+    <button class="lb-btn lb-close-btn" onclick="closeLightbox()">✕ Close</button>
+  </div>
+  <div class="lb-img-wrap">
+    <img id="lightbox-img" src="" alt="Indicator fullscreen view" draggable="false">
+  </div>
+</div>
+</body>
+</html>
