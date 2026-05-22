@@ -183,15 +183,16 @@
 
     .hero-h1 {
       font-family: var(--ff-head);
-      font-size: clamp(58px, 10vw, 128px);
+      font-size: clamp(36px, 6vw, 72px);
       font-weight: 800;
-      line-height: 0.92;
-      letter-spacing: -0.03em;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
       text-transform: uppercase;
       margin-bottom: 36px;
       opacity: 0;
       animation: rise 1s 0.35s var(--ease) forwards;
       position: relative;
+      max-width: 600px;
     }
 
     .hero-h1 .line1 {
@@ -890,6 +891,88 @@
       footer { flex-direction: column; text-align: center; }
       .footer-disc { text-align: center; }
     }
+    /* ── ABOUT ── */
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.6fr;
+      gap: 80px;
+      align-items: start;
+    }
+
+    .about-left { position: sticky; top: 100px; }
+
+    .about-tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 28px;
+    }
+
+    .about-tag {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text3);
+      border: 1px solid var(--border);
+      padding: 5px 12px;
+      border-radius: 2px;
+    }
+
+    .about-right {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .about-right p {
+      font-size: 15px;
+      color: var(--text2);
+      line-height: 1.85;
+      font-weight: 300;
+    }
+
+    .about-right p:first-child {
+      font-size: 16px;
+      color: var(--text);
+    }
+
+    /* ── DM BOX ── */
+    .dm-box {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      padding: 32px 36px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      margin-top: 20px;
+    }
+
+    .dm-icon { font-size: 24px; flex-shrink: 0; margin-top: 2px; }
+
+    .dm-title {
+      font-family: var(--ff-head);
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .dm-text {
+      font-size: 14px;
+      color: var(--text2);
+      line-height: 1.65;
+      font-weight: 300;
+    }
+
+    @media (max-width: 900px) {
+      .about-grid { grid-template-columns: 1fr; gap: 40px; }
+      .about-left { position: static; }
+    }
+
     /* ── TV LINK ── */
     .tv-link {
       display: inline-flex;
@@ -951,6 +1034,7 @@
   </a>
   <div class="nav-right">
     <a class="nav-link" href="#indicators">Indicators</a>
+    <a class="nav-link" href="#about">About</a>
     <a class="nav-link" href="#pricing">Pricing</a>
     <a class="nav-link" href="#faq">FAQ</a>
     <a class="nav-btn" href="#pricing">Get Access — $80</a>
@@ -1160,6 +1244,33 @@
 
 <hr class="div">
 
+<!-- ABOUT -->
+<section class="sec" id="about">
+  <div class="wrap">
+    <div class="about-grid reveal">
+      <div class="about-left">
+        <div class="sec-label">About</div>
+        <h2 class="sec-title">The Person<br><span>Behind It</span></h2>
+        <div class="about-tag-row">
+          <span class="about-tag">ICT Trader</span>
+          <span class="about-tag">CS Grad 2025</span>
+          <span class="about-tag">Team USA Swimmer</span>
+          <span class="about-tag">Futures</span>
+        </div>
+      </div>
+      <div class="about-right">
+        <p>I started learning ICT in September 2023 and that's all I've ever studied. Never jumped around to different strategies, just locked in on ICT concepts and applied them to the futures market.</p>
+        <p>The indicators honestly came out of frustration. I was spending so much time manually plotting everything, sessions, gaps, fair value gaps, that it was taking away from actually trading. I'm a CS grad, been coding since 2021, so I just built what I needed. Then realized other traders were probably dealing with the same thing.</p>
+        <p>Growing up I swam competitively for Team USA club. Early mornings, same drills every day, grinding even when you don't feel like it, that's just how I'm wired. Trading hit me the same way. It's a challenge and I don't back down from those.</p>
+        <p>Big thank you to Michael J. Huddleston for everything he has put out freely. These scripts were built with one goal in mind, helping you see the market through time first, then price. That perspective alone can change how any trader reads the market, whether you use ICT or not. I've put serious work into these and I genuinely believe in what they do. Now it's your turn to see the market and build your edge.</p>
+        <a href="https://www.tradingview.com/u/txntradez/" target="_blank" class="tv-link" style="margin-top:24px;">Find me on TradingView →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="div">
+
 <!-- HOW IT WORKS -->
 <section class="sec" id="how-it-works">
   <div class="wrap">
@@ -1250,6 +1361,14 @@
     <div class="warn-box reveal">
       <span class="warn-icon">⚠</span>
       <p class="warn-text"><strong>Important:</strong> You must include your TradingView username in the payment memo. Without it, access cannot be granted. If you have issues, DM <strong>@txntradez</strong> on TradingView with your payment confirmation.</p>
+    </div>
+    <div class="dm-box reveal">
+      <div class="dm-icon">💬</div>
+      <div>
+        <div class="dm-title">Have a question, recommendation, or concern?</div>
+        <p class="dm-text">Reach out directly on TradingView. DMs are open and I respond to everyone.</p>
+        <a href="https://www.tradingview.com/u/txntradez/" target="_blank" class="btn-main" style="display:inline-flex;margin-top:16px;padding:12px 28px;font-size:13px;">DM me on TradingView →</a>
+      </div>
     </div>
   </div>
 </section>
