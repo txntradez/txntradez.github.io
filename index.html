@@ -1,1497 +1,1406 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>txntradez — Premium TradingView Indicators</title>
-  <meta name="description" content="Professional Pine Script indicators for serious traders. Session+, NWOG/NDOG+, and PFVG+ — all three for a one-time fee." />
+  <meta name="description" content="Three professional Pine Script indicators for serious traders. One-time $80 access."/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #050810;
-      --bg2: #090d18;
-      --bg3: #0d1220;
-      --card: #0f1525;
-      --card2: #131929;
-      --border: rgba(255,255,255,0.06);
-      --border-glow: rgba(0,210,255,0.25);
-      --accent: #00d2ff;
-      --accent2: #0099cc;
-      --accent3: #00ff88;
-      --gold: #f0b429;
-      --text: #e8edf5;
-      --text2: #8a9ab5;
-      --text3: #4a5a75;
-      --font-display: 'Rajdhani', sans-serif;
-      --font-mono: 'Space Mono', monospace;
-      --font-body: 'Outfit', sans-serif;
+      --bg:       #07090f;
+      --surface:  #0c0f1a;
+      --surface2: #111526;
+      --border:   rgba(255,255,255,0.06);
+      --border2:  rgba(255,255,255,0.1);
+      --cyan:     #00e5ff;
+      --cyan-dim: rgba(0,229,255,0.12);
+      --green:    #00ff9d;
+      --gold:     #ffc84a;
+      --red:      #ff4d6a;
+      --text:     #eef0f8;
+      --text2:    #7a8299;
+      --text3:    #3a4260;
+      --ff-head:  'Syne', sans-serif;
+      --ff-body:  'DM Sans', sans-serif;
+      --ff-mono:  'DM Mono', monospace;
+      --ease:     cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     html { scroll-behavior: smooth; }
 
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: var(--font-body);
+      font-family: var(--ff-body);
       overflow-x: hidden;
-      line-height: 1.6;
+      cursor: none;
     }
 
-    /* ─── NOISE OVERLAY ─── */
-    body::before {
-      content: '';
+    /* ── CUSTOM CURSOR ── */
+    #cursor {
+      position: fixed;
+      width: 10px; height: 10px;
+      background: var(--cyan);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%,-50%);
+      transition: width 0.2s var(--ease), height 0.2s var(--ease), opacity 0.2s;
+      mix-blend-mode: screen;
+    }
+    #cursor-ring {
+      position: fixed;
+      width: 36px; height: 36px;
+      border: 1px solid rgba(0,229,255,0.4);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9998;
+      transform: translate(-50%,-50%);
+      transition: transform 0.12s var(--ease), width 0.3s var(--ease), height 0.3s var(--ease);
+    }
+    body:hover #cursor { opacity: 1; }
+
+    /* ── CANVAS BG ── */
+    #bg-canvas {
       position: fixed;
       inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-      pointer-events: none;
       z-index: 0;
-      opacity: 0.5;
+      pointer-events: none;
+      opacity: 0.4;
     }
 
-    /* ─── GRID BACKGROUND ─── */
-    body::after {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(0,210,255,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,210,255,0.03) 1px, transparent 1px);
-      background-size: 40px 40px;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    /* ─── NAV ─── */
+    /* ── NAV ── */
     nav {
       position: fixed;
       top: 0; left: 0; right: 0;
       z-index: 100;
+      height: 68px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 40px;
-      height: 64px;
-      background: rgba(5,8,16,0.85);
-      backdrop-filter: blur(20px);
+      padding: 0 48px;
+      background: rgba(7,9,15,0.7);
+      backdrop-filter: blur(24px);
       border-bottom: 1px solid var(--border);
     }
 
-    .nav-logo {
-      font-family: var(--font-display);
-      font-size: 22px;
-      font-weight: 700;
-      letter-spacing: 0.15em;
-      color: var(--accent);
+    .logo {
+      font-family: var(--ff-head);
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
       text-transform: uppercase;
+      color: var(--text);
       text-decoration: none;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
     }
 
-    .nav-logo span {
-      color: var(--text);
-      opacity: 0.5;
-    }
-
-    .nav-logo::before {
-      content: '';
-      width: 8px; height: 8px;
-      background: var(--accent3);
+    .logo-dot {
+      width: 7px; height: 7px;
+      background: var(--green);
       border-radius: 50%;
-      box-shadow: 0 0 8px var(--accent3);
-      animation: pulse 2s infinite;
+      box-shadow: 0 0 10px var(--green);
+      animation: breathe 2.5s ease-in-out infinite;
     }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.8); }
+    @keyframes breathe {
+      0%,100% { opacity:1; transform:scale(1); }
+      50% { opacity:0.4; transform:scale(0.7); }
     }
 
-    .nav-links {
+    .nav-right {
       display: flex;
-      gap: 32px;
-      list-style: none;
+      align-items: center;
+      gap: 36px;
     }
 
-    .nav-links a {
-      font-family: var(--font-mono);
+    .nav-link {
+      font-family: var(--ff-mono);
       font-size: 12px;
       color: var(--text2);
       text-decoration: none;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.06em;
       transition: color 0.2s;
     }
+    .nav-link:hover { color: var(--cyan); }
 
-    .nav-links a:hover { color: var(--accent); }
-
-    .nav-cta {
-      font-family: var(--font-mono);
+    .nav-btn {
+      font-family: var(--ff-mono);
       font-size: 12px;
-      background: var(--accent);
-      color: var(--bg);
-      padding: 8px 20px;
-      border-radius: 3px;
-      text-decoration: none;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.08em;
-      transition: background 0.2s, transform 0.1s;
+      color: var(--bg);
+      background: var(--cyan);
+      padding: 9px 22px;
+      border-radius: 2px;
+      text-decoration: none;
+      transition: opacity 0.2s, transform 0.2s;
     }
+    .nav-btn:hover { opacity: 0.85; transform: translateY(-1px); }
 
-    .nav-cta:hover { background: #33ddff; transform: translateY(-1px); }
-
-    /* ─── HERO ─── */
+    /* ── HERO ── */
     .hero {
       position: relative;
+      z-index: 1;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       text-align: center;
-      padding: 120px 24px 80px;
-      z-index: 1;
+      padding: 140px 24px 100px;
       overflow: hidden;
     }
 
-    .hero-glow {
-      position: absolute;
-      width: 800px; height: 800px;
-      background: radial-gradient(circle, rgba(0,210,255,0.08) 0%, transparent 70%);
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-    }
-
-    .hero-glow2 {
-      position: absolute;
-      width: 400px; height: 400px;
-      background: radial-gradient(circle, rgba(0,255,136,0.05) 0%, transparent 70%);
-      top: 30%; left: 20%;
-      pointer-events: none;
-    }
-
-    .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(0,210,255,0.08);
-      border: 1px solid rgba(0,210,255,0.2);
-      padding: 6px 16px;
-      border-radius: 100px;
-      font-family: var(--font-mono);
+    .hero-eyebrow {
+      font-family: var(--ff-mono);
       font-size: 11px;
-      color: var(--accent);
-      letter-spacing: 0.12em;
+      letter-spacing: 0.2em;
       text-transform: uppercase;
-      margin-bottom: 32px;
-      animation: fadeUp 0.8s ease both;
-    }
-
-    .hero-badge::before {
-      content: '';
-      width: 6px; height: 6px;
-      background: var(--accent3);
-      border-radius: 50%;
-      box-shadow: 0 0 6px var(--accent3);
-      animation: pulse 1.5s infinite;
-    }
-
-    .hero h1 {
-      font-family: var(--font-display);
-      font-size: clamp(48px, 8vw, 96px);
-      font-weight: 700;
-      line-height: 1;
-      letter-spacing: 0.02em;
-      text-transform: uppercase;
-      margin-bottom: 24px;
-      animation: fadeUp 0.8s 0.1s ease both;
-    }
-
-    .hero h1 em {
-      font-style: normal;
-      color: transparent;
-      -webkit-text-stroke: 1px var(--accent);
-      display: block;
-    }
-
-    .hero-sub {
-      font-size: 18px;
-      color: var(--text2);
-      max-width: 540px;
-      margin: 0 auto 48px;
-      font-weight: 300;
-      animation: fadeUp 0.8s 0.2s ease both;
-    }
-
-    .hero-sub strong { color: var(--text); font-weight: 600; }
-
-    .hero-actions {
-      display: flex;
-      gap: 16px;
-      justify-content: center;
-      flex-wrap: wrap;
-      animation: fadeUp 0.8s 0.3s ease both;
-    }
-
-    .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: var(--bg);
-      font-family: var(--font-display);
-      font-size: 18px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      text-decoration: none;
-      padding: 16px 36px;
-      border-radius: 4px;
-      transition: all 0.2s;
-      box-shadow: 0 0 30px rgba(0,210,255,0.3);
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 0 50px rgba(0,210,255,0.5);
-    }
-
-    .btn-secondary {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      background: transparent;
-      color: var(--text);
-      font-family: var(--font-display);
-      font-size: 18px;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      text-decoration: none;
-      padding: 16px 36px;
-      border-radius: 4px;
-      border: 1px solid var(--border);
-      transition: all 0.2s;
-    }
-
-    .btn-secondary:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    .hero-stats {
-      display: flex;
-      gap: 48px;
-      justify-content: center;
-      margin-top: 80px;
-      padding-top: 48px;
-      border-top: 1px solid var(--border);
-      animation: fadeUp 0.8s 0.4s ease both;
-    }
-
-    .stat {
-      text-align: center;
-    }
-
-    .stat-num {
-      font-family: var(--font-display);
-      font-size: 36px;
-      font-weight: 700;
-      color: var(--accent);
-      line-height: 1;
-    }
-
-    .stat-label {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--text3);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-top: 6px;
-    }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(24px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* ─── SECTION LAYOUT ─── */
-    section {
-      position: relative;
-      z-index: 1;
-    }
-
-    .section-header {
-      text-align: center;
-      margin-bottom: 64px;
-    }
-
-    .section-tag {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--accent);
-      text-transform: uppercase;
-      letter-spacing: 0.15em;
-      margin-bottom: 16px;
-      display: block;
-    }
-
-    .section-title {
-      font-family: var(--font-display);
-      font-size: clamp(32px, 5vw, 52px);
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .section-title span { color: var(--accent); }
-
-    /* ─── INDICATORS ─── */
-    #indicators {
-      padding: 100px 24px;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .indicator-card {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      overflow: hidden;
-      margin-bottom: 48px;
-      transition: border-color 0.3s;
-    }
-
-    .indicator-card:hover { border-color: var(--border-glow); }
-
-    .indicator-card.reverse { direction: rtl; }
-    .indicator-card.reverse > * { direction: ltr; }
-
-    .indicator-visual {
-      position: relative;
-      background: var(--bg3);
-      min-height: 320px;
+      color: var(--cyan);
+      margin-bottom: 28px;
+      opacity: 0;
+      animation: rise 1s 0.2s var(--ease) forwards;
       display: flex;
       align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
-
-    /* Placeholder chart animation */
-    .chart-placeholder {
-      width: 100%;
-      height: 100%;
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: flex-end;
-      padding: 24px;
-      gap: 3px;
-    }
-
-    .chart-bars {
-      display: flex;
-      align-items: flex-end;
-      gap: 4px;
-      width: 100%;
-      height: 200px;
-    }
-
-    .bar {
-      flex: 1;
-      border-radius: 2px 2px 0 0;
-      transition: height 0.3s;
-      opacity: 0.7;
-    }
-
-    .candle-container {
-      width: 100%;
-      height: 260px;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .candle-chart {
-      display: flex;
-      align-items: flex-end;
-      gap: 6px;
-      height: 200px;
-    }
-
-    .candle {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0;
-    }
-
-    .candle-body {
-      width: 12px;
-      border-radius: 1px;
-    }
-
-    .candle-wick {
-      width: 1.5px;
-      background: var(--text3);
-    }
-
-    .upload-zone {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
       gap: 12px;
-      background: rgba(0,210,255,0.03);
-      border: 2px dashed rgba(0,210,255,0.15);
-      margin: 20px;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.2s;
-      z-index: 10;
     }
 
-    .upload-zone:hover {
-      background: rgba(0,210,255,0.06);
-      border-color: rgba(0,210,255,0.3);
-    }
-
-    .upload-zone .upload-icon {
-      font-size: 32px;
+    .hero-eyebrow::before,
+    .hero-eyebrow::after {
+      content: '';
+      display: block;
+      width: 32px;
+      height: 1px;
+      background: var(--cyan);
       opacity: 0.4;
     }
 
-    .upload-zone p {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--text3);
-      text-align: center;
-      line-height: 1.8;
+    .hero-h1 {
+      font-family: var(--ff-head);
+      font-size: clamp(58px, 10vw, 128px);
+      font-weight: 800;
+      line-height: 0.92;
+      letter-spacing: -0.03em;
       text-transform: uppercase;
-      letter-spacing: 0.1em;
-    }
-
-    .upload-zone span { color: var(--accent); }
-
-    /* Animated chart backgrounds */
-    .animated-chart {
-      width: 100%;
-      height: 100%;
-      position: absolute;
-      inset: 0;
-    }
-
-    .indicator-info {
-      padding: 48px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    .ind-number {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--text3);
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      margin-bottom: 16px;
-    }
-
-    .ind-name {
-      font-family: var(--font-display);
-      font-size: clamp(24px, 3vw, 36px);
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      line-height: 1.1;
-      margin-bottom: 8px;
-    }
-
-    .ind-name span { color: var(--accent); }
-
-    .ind-tag {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--accent3);
-      letter-spacing: 0.1em;
-      margin-bottom: 24px;
-      opacity: 0.8;
-    }
-
-    .ind-desc {
-      color: var(--text2);
-      font-size: 15px;
-      line-height: 1.8;
-      margin-bottom: 32px;
-      font-weight: 300;
-    }
-
-    .features-list {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .features-list li {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      font-size: 14px;
-      color: var(--text2);
-    }
-
-    .features-list li::before {
-      content: '▹';
-      color: var(--accent);
-      flex-shrink: 0;
-      font-size: 12px;
-      margin-top: 2px;
-    }
-
-    /* ─── PRICING ─── */
-    #pricing {
-      padding: 100px 24px;
-      max-width: 800px;
-      margin: 0 auto;
-    }
-
-    .pricing-card {
-      background: var(--card);
-      border: 1px solid var(--border-glow);
-      border-radius: 12px;
-      padding: 56px;
-      text-align: center;
+      margin-bottom: 36px;
+      opacity: 0;
+      animation: rise 1s 0.35s var(--ease) forwards;
       position: relative;
-      overflow: hidden;
-      box-shadow: 0 0 60px rgba(0,210,255,0.08);
     }
 
-    .pricing-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--accent), transparent);
-    }
-
-    .pricing-glow {
-      position: absolute;
-      width: 300px; height: 300px;
-      background: radial-gradient(circle, rgba(0,210,255,0.06) 0%, transparent 70%);
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-    }
-
-    .pricing-label {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--accent);
-      text-transform: uppercase;
-      letter-spacing: 0.15em;
-      margin-bottom: 16px;
-    }
-
-    .pricing-amount {
-      font-family: var(--font-display);
-      font-size: 80px;
-      font-weight: 700;
+    .hero-h1 .line1 {
+      display: block;
       color: var(--text);
-      line-height: 1;
-      margin-bottom: 8px;
+      position: relative;
     }
 
-    .pricing-amount sup {
-      font-size: 36px;
-      color: var(--accent);
-      vertical-align: top;
-      margin-top: 12px;
+    .hero-h1 .line2 {
+      display: block;
+      position: relative;
+    }
+
+    .hero-h1 .word-build {
+      color: transparent;
+      -webkit-text-stroke: 1.5px rgba(255,255,255,0.18);
+      position: relative;
+    }
+
+    .hero-h1 .word-your {
+      color: transparent;
+      -webkit-text-stroke: 1.5px rgba(255,255,255,0.18);
+    }
+
+    .hero-h1 .word-edge {
+      color: var(--cyan);
+      position: relative;
       display: inline-block;
     }
 
-    .pricing-term {
-      font-family: var(--font-mono);
-      font-size: 12px;
-      color: var(--text3);
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      margin-bottom: 40px;
-    }
-
-    .pricing-includes {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 48px;
-      text-align: left;
-    }
-
-    .pricing-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 12px 16px;
-      background: rgba(0,210,255,0.04);
-      border: 1px solid rgba(0,210,255,0.1);
-      border-radius: 4px;
-      font-size: 13px;
-      color: var(--text2);
-    }
-
-    .pricing-item::before {
-      content: '✓';
-      color: var(--accent3);
-      font-weight: 700;
-      flex-shrink: 0;
-    }
-
-    /* ─── HOW IT WORKS ─── */
-    #how-it-works {
-      padding: 100px 24px;
-      max-width: 1000px;
-      margin: 0 auto;
-    }
-
-    .steps {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 24px;
-      position: relative;
-    }
-
-    .steps::before {
+    .hero-h1 .word-edge::after {
       content: '';
       position: absolute;
-      top: 32px; left: 10%; right: 10%;
+      bottom: 4px;
+      left: 0; right: 0;
+      height: 3px;
+      background: var(--cyan);
+      opacity: 0.35;
+      border-radius: 2px;
+    }
+
+    .hero-h1 .dot {
+      color: var(--cyan);
+      opacity: 0.6;
+    }
+
+    .hero-p {
+      font-size: 17px;
+      font-weight: 300;
+      color: var(--text2);
+      max-width: 480px;
+      line-height: 1.75;
+      margin-bottom: 52px;
+      opacity: 0;
+      animation: rise 1s 0.5s var(--ease) forwards;
+    }
+
+    .hero-p strong { color: var(--text); font-weight: 500; }
+
+    .hero-ctas {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      flex-wrap: wrap;
+      opacity: 0;
+      animation: rise 1s 0.65s var(--ease) forwards;
+    }
+
+    .btn-main {
+      font-family: var(--ff-head);
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--bg);
+      background: var(--cyan);
+      padding: 16px 40px;
+      border-radius: 2px;
+      text-decoration: none;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s var(--ease);
+    }
+
+    .btn-main::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: white;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .btn-main:hover { transform: translateY(-2px); }
+    .btn-main:hover::after { opacity: 0.1; }
+
+    .btn-ghost {
+      font-family: var(--ff-head);
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text2);
+      background: transparent;
+      padding: 16px 40px;
+      border-radius: 2px;
+      text-decoration: none;
+      border: 1px solid var(--border2);
+      transition: color 0.2s, border-color 0.2s, transform 0.2s var(--ease);
+    }
+
+    .btn-ghost:hover {
+      color: var(--text);
+      border-color: rgba(255,255,255,0.25);
+      transform: translateY(-2px);
+    }
+
+    /* Hero stats strip */
+    .hero-stats {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      display: flex;
+      border-top: 1px solid var(--border);
+      opacity: 0;
+      animation: rise 1s 0.8s var(--ease) forwards;
+    }
+
+    .hstat {
+      flex: 1;
+      padding: 28px 24px;
+      text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .hstat:last-child { border-right: none; }
+
+    .hstat-val {
+      font-family: var(--ff-head);
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .hstat-val span { color: var(--cyan); }
+
+    .hstat-label {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text3);
+    }
+
+    @keyframes rise {
+      from { opacity:0; transform:translateY(20px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+
+    /* ── SECTION WRAPPER ── */
+    .wrap {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 32px;
+    }
+
+    .sec {
+      position: relative;
+      z-index: 1;
+      padding: 120px 0;
+    }
+
+    .sec-label {
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .sec-label::after {
+      content: '';
+      flex: 1;
+      max-width: 48px;
       height: 1px;
-      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      background: var(--cyan);
       opacity: 0.3;
     }
 
-    .step {
-      text-align: center;
-      position: relative;
+    .sec-title {
+      font-family: var(--ff-head);
+      font-size: clamp(32px, 5vw, 56px);
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      line-height: 1.05;
+      text-transform: uppercase;
     }
 
-    .step-num {
-      width: 64px; height: 64px;
-      border-radius: 50%;
-      background: var(--card);
-      border: 1px solid var(--border-glow);
+    .sec-title span { color: var(--cyan); }
+
+    /* ── INDICATORS ── */
+    .ind-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-top: 72px;
+    }
+
+    .ind-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      transition: border-color 0.4s var(--ease);
+      opacity: 0;
+      transform: translateY(32px);
+      transition: opacity 0.7s var(--ease), transform 0.7s var(--ease), border-color 0.3s;
+    }
+
+    .ind-row.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .ind-row:hover { border-color: rgba(0,229,255,0.2); }
+    .ind-row.flip { direction: rtl; }
+    .ind-row.flip > * { direction: ltr; }
+
+    /* Visual pane */
+    .ind-visual {
+      position: relative;
+      min-height: 340px;
+      background: var(--bg);
+      overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 20px;
-      font-family: var(--font-display);
-      font-size: 24px;
-      font-weight: 700;
-      color: var(--accent);
+    }
+
+    .ind-visual svg {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+    }
+
+
+    /* Info pane */
+    .ind-info {
+      padding: 52px 56px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .ind-num {
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      color: var(--text3);
+      letter-spacing: 0.14em;
+      margin-bottom: 18px;
+    }
+
+    .ind-name {
+      font-family: var(--ff-head);
+      font-size: clamp(26px, 3vw, 40px);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: -0.01em;
+      line-height: 1.05;
+      margin-bottom: 6px;
+    }
+
+    .ind-name em {
+      font-style: normal;
+      color: var(--cyan);
+    }
+
+    .ind-handle {
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      color: var(--green);
+      letter-spacing: 0.1em;
+      margin-bottom: 28px;
+      opacity: 0.7;
+    }
+
+    .ind-desc {
+      font-size: 14px;
+      font-weight: 300;
+      color: var(--text2);
+      line-height: 1.85;
+      margin-bottom: 32px;
+    }
+
+    .feat-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .feat-list li {
+      font-size: 13px;
+      color: var(--text2);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      line-height: 1.5;
+    }
+
+    .feat-list li::before {
+      content: '→';
+      color: var(--cyan);
+      font-size: 11px;
+      flex-shrink: 0;
+      margin-top: 1px;
+      opacity: 0.7;
+    }
+
+    /* ── HOW IT WORKS ── */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(4,1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-top: 72px;
+    }
+
+    .step {
+      background: var(--surface);
+      padding: 44px 32px;
       position: relative;
-      z-index: 1;
+      transition: background 0.3s;
+    }
+
+    .step:hover { background: var(--surface2); }
+
+    .step-n {
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      color: var(--cyan);
+      letter-spacing: 0.12em;
+      margin-bottom: 20px;
+      opacity: 0.7;
     }
 
     .step-title {
-      font-family: var(--font-display);
-      font-size: 16px;
-      font-weight: 600;
+      font-family: var(--ff-head);
+      font-size: 17px;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 10px;
+      letter-spacing: 0.04em;
+      margin-bottom: 12px;
     }
 
     .step-desc {
       font-size: 13px;
       color: var(--text2);
       line-height: 1.7;
+      font-weight: 300;
     }
 
-    .step-desc strong { color: var(--accent3); }
+    .step-desc strong { color: var(--cyan); font-weight: 500; }
 
-    /* ─── VENMO SECTION ─── */
-    #payment {
-      padding: 100px 24px;
-      max-width: 700px;
-      margin: 0 auto;
-      text-align: center;
-    }
-
-    .venmo-card {
-      background: var(--card);
+    /* ── PRICING ── */
+    .pricing-wrap {
+      margin-top: 72px;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 2px;
+      background: var(--border);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 48px;
-      margin-top: 48px;
+      border-radius: 6px;
+      overflow: hidden;
     }
 
-    .venmo-logo-area {
+    .pricing-left {
+      background: var(--surface);
+      padding: 64px 56px;
+    }
+
+    .price-tag {
+      font-family: var(--ff-head);
+      font-size: 96px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      margin: 24px 0 8px;
+    }
+
+    .price-tag sup {
+      font-size: 40px;
+      color: var(--cyan);
+      vertical-align: top;
+      margin-top: 16px;
+      display: inline-block;
+    }
+
+    .price-term {
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 48px;
+    }
+
+    .price-includes {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .pi {
       display: flex;
       align-items: center;
-      justify-content: center;
       gap: 12px;
-      margin-bottom: 32px;
+      font-size: 14px;
+      color: var(--text2);
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
     }
 
-    .venmo-icon {
-      width: 48px; height: 48px;
-      background: #008CFF;
-      border-radius: 10px;
+    .pi:last-child { border-bottom: none; }
+
+    .pi-check {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: rgba(0,255,157,0.1);
+      border: 1px solid rgba(0,255,157,0.2);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: var(--font-display);
-      font-size: 20px;
-      font-weight: 700;
+      flex-shrink: 0;
+      font-size: 10px;
+      color: var(--green);
+    }
+
+    .pricing-right {
+      background: var(--surface2);
+      padding: 64px 48px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      gap: 24px;
+    }
+
+    .venmo-badge {
+      width: 56px; height: 56px;
+      background: #008CFF;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--ff-head);
+      font-size: 22px;
+      font-weight: 800;
       color: white;
     }
 
-    .venmo-name {
-      font-family: var(--font-display);
-      font-size: 28px;
-      font-weight: 700;
-      color: #008CFF;
-    }
-
-    .venmo-handle {
-      font-family: var(--font-mono);
-      font-size: 24px;
-      font-weight: 700;
+    .venmo-handle-big {
+      font-family: var(--ff-mono);
+      font-size: 22px;
+      font-weight: 500;
       color: var(--text);
+      letter-spacing: 0.04em;
       background: rgba(0,140,255,0.08);
-      border: 1px solid rgba(0,140,255,0.2);
-      padding: 16px 32px;
-      border-radius: 6px;
-      margin-bottom: 32px;
-      letter-spacing: 0.05em;
+      border: 1px solid rgba(0,140,255,0.15);
+      padding: 14px 28px;
+      border-radius: 4px;
+      width: 100%;
     }
 
-    .venmo-instructions {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      text-align: left;
-      margin-bottom: 32px;
-    }
-
-    .instruction-row {
-      display: flex;
-      gap: 12px;
-      align-items: flex-start;
-      padding: 12px 16px;
-      background: var(--bg3);
-      border-radius: 6px;
-      border: 1px solid var(--border);
-    }
-
-    .instruction-num {
-      font-family: var(--font-mono);
-      font-size: 12px;
-      color: var(--accent);
-      font-weight: 700;
-      flex-shrink: 0;
-      margin-top: 1px;
-    }
-
-    .instruction-text {
-      font-size: 14px;
-      color: var(--text2);
-      line-height: 1.6;
-    }
-
-    .instruction-text strong { color: var(--text); }
-
-    .important-note {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      padding: 16px 20px;
-      background: rgba(240,180,41,0.06);
-      border: 1px solid rgba(240,180,41,0.2);
-      border-radius: 6px;
-      text-align: left;
-    }
-
-    .important-note .icon { font-size: 18px; flex-shrink: 0; }
-
-    .important-note p {
+    .venmo-note {
       font-size: 13px;
       color: var(--text2);
-      line-height: 1.6;
+      line-height: 1.7;
+      font-weight: 300;
     }
 
-    .important-note strong { color: var(--gold); }
+    .venmo-note strong { color: var(--cyan); font-weight: 500; }
 
-    /* ─── FAQ ─── */
-    #faq {
-      padding: 100px 24px;
-      max-width: 720px;
-      margin: 0 auto;
+    /* ── PAYMENT STEPS ── */
+    .pay-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-top: 72px;
+    }
+
+    .pay-step {
+      background: var(--surface);
+      padding: 28px 36px;
+      display: flex;
+      align-items: flex-start;
+      gap: 24px;
+      transition: background 0.2s;
+    }
+
+    .pay-step:hover { background: var(--surface2); }
+
+    .pay-n {
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      color: var(--cyan);
+      opacity: 0.6;
+      letter-spacing: 0.1em;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .pay-text {
+      font-size: 14px;
+      color: var(--text2);
+      line-height: 1.65;
+      font-weight: 300;
+    }
+
+    .pay-text strong { color: var(--text); font-weight: 500; }
+
+    /* ── WARNING BOX ── */
+    .warn-box {
+      display: flex;
+      gap: 16px;
+      padding: 20px 24px;
+      background: rgba(255,196,74,0.05);
+      border: 1px solid rgba(255,196,74,0.15);
+      border-radius: 4px;
+      margin-top: 20px;
+    }
+
+    .warn-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+    .warn-text {
+      font-size: 13px;
+      color: var(--text2);
+      line-height: 1.7;
+      font-weight: 300;
+    }
+
+    .warn-text strong { color: var(--gold); font-weight: 500; }
+
+    /* ── FAQ ── */
+    .faq-list {
+      margin-top: 72px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
     }
 
     .faq-item {
       border-bottom: 1px solid var(--border);
-      padding: 24px 0;
+      background: var(--surface);
     }
 
+    .faq-item:last-child { border-bottom: none; }
+
     .faq-q {
-      font-family: var(--font-display);
-      font-size: 18px;
-      font-weight: 600;
-      letter-spacing: 0.04em;
+      width: 100%;
+      background: none;
+      border: none;
       color: var(--text);
+      font-family: var(--ff-head);
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-align: left;
+      padding: 26px 36px;
       cursor: pointer;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 16px;
+      gap: 24px;
+      transition: background 0.2s;
     }
 
-    .faq-q::after {
-      content: '+';
-      color: var(--accent);
-      font-size: 24px;
-      font-weight: 300;
+    .faq-q:hover { background: var(--surface2); }
+
+    .faq-icon {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      border: 1px solid var(--border2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      color: var(--cyan);
       flex-shrink: 0;
-      transition: transform 0.2s;
+      transition: transform 0.3s var(--ease), background 0.2s;
     }
 
-    .faq-item.open .faq-q::after { transform: rotate(45deg); }
+    .faq-item.open .faq-icon {
+      transform: rotate(45deg);
+      background: var(--cyan-dim);
+    }
 
     .faq-a {
       font-size: 14px;
       color: var(--text2);
       line-height: 1.8;
+      font-weight: 300;
       max-height: 0;
       overflow: hidden;
-      transition: max-height 0.3s ease, padding 0.3s;
+      transition: max-height 0.4s var(--ease), padding 0.3s;
+      padding: 0 36px;
     }
 
     .faq-item.open .faq-a {
-      max-height: 200px;
-      padding-top: 16px;
+      max-height: 300px;
+      padding: 0 36px 28px;
     }
 
-    /* ─── FOOTER ─── */
+    /* ── FOOTER ── */
     footer {
       position: relative;
       z-index: 1;
       border-top: 1px solid var(--border);
-      padding: 48px 24px;
+      padding: 56px 48px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
       text-align: center;
     }
 
     .footer-logo {
-      font-family: var(--font-display);
-      font-size: 24px;
-      font-weight: 700;
-      letter-spacing: 0.15em;
-      color: var(--accent);
+      font-family: var(--ff-head);
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
-      margin-bottom: 16px;
+      color: var(--text2);
     }
 
-    .footer-sub {
-      font-family: var(--font-mono);
+    .footer-disc {
+      font-size: 12px;
+      color: var(--text3);
+      max-width: 480px;
+      line-height: 1.7;
+      text-align: center;
+    }
+
+    .footer-right {
+      font-family: var(--ff-mono);
       font-size: 11px;
       color: var(--text3);
-      letter-spacing: 0.1em;
+      letter-spacing: 0.08em;
     }
 
-    .footer-disclaimer {
-      font-size: 12px;
-      color: var(--text3);
-      max-width: 500px;
-      margin: 24px auto 0;
-      line-height: 1.7;
-    }
-
-    /* ─── TICKER TAPE ─── */
-    .ticker-wrap {
-      overflow: hidden;
-      background: var(--bg3);
+    /* ── DIVIDER ── */
+    hr.div {
+      border: none;
       border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-      padding: 12px 0;
-      position: relative;
-      z-index: 1;
+      max-width: 1180px;
+      margin: 0 auto;
     }
 
-    .ticker-inner {
-      display: flex;
-      gap: 64px;
-      animation: ticker 30s linear infinite;
-      white-space: nowrap;
+    /* ── SCROLL REVEAL ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.7s var(--ease), transform 0.7s var(--ease);
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
     }
 
-    .ticker-item {
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      nav { padding: 0 24px; }
+      .nav-right .nav-link { display: none; }
+      .ind-row { grid-template-columns: 1fr; }
+      .ind-row.flip { direction: ltr; }
+      .ind-info { padding: 36px 28px; }
+      .pricing-wrap { grid-template-columns: 1fr; }
+      .steps { grid-template-columns: 1fr 1fr; }
+      .hero-stats { position: relative; border-top: 1px solid var(--border); }
+      footer { flex-direction: column; text-align: center; }
+      .footer-disc { text-align: center; }
+    }
+    /* ── TV LINK ── */
+    .tv-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 28px;
+      font-family: var(--ff-mono);
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      color: var(--cyan);
+      text-decoration: none;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+    .tv-link:hover { opacity: 1; }
+
+    /* ── SOCIAL LINKS ── */
+    .footer-socials {
       display: flex;
+      gap: 20px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .social-link {
+      display: inline-flex;
       align-items: center;
       gap: 8px;
-      font-family: var(--font-mono);
+      font-family: var(--ff-mono);
       font-size: 12px;
-      color: var(--text3);
       letter-spacing: 0.08em;
-      flex-shrink: 0;
+      color: var(--text3);
+      text-decoration: none;
+      padding: 8px 16px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      transition: color 0.2s, border-color 0.2s;
     }
 
-    .ticker-item .up { color: var(--accent3); }
-    .ticker-item .down { color: #ff4466; }
-
-    @keyframes ticker {
-      from { transform: translateX(0); }
-      to { transform: translateX(-50%); }
+    .social-link:hover {
+      color: var(--cyan);
+      border-color: rgba(0,229,255,0.25);
     }
 
-    /* ─── DIVIDER ─── */
-    .divider {
-      max-width: 1200px;
-      margin: 0 auto;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--border), transparent);
-    }
-
-    /* ─── RESPONSIVE ─── */
-    @media (max-width: 768px) {
-      nav { padding: 0 20px; }
-      .nav-links { display: none; }
-      .indicator-card { grid-template-columns: 1fr; }
-      .indicator-card.reverse { direction: ltr; }
-      .indicator-visual { min-height: 220px; }
-      .indicator-info { padding: 32px 24px; }
-      .pricing-card { padding: 32px 24px; }
-      .pricing-includes { grid-template-columns: 1fr; }
-      .steps { grid-template-columns: 1fr 1fr; }
-      .hero-stats { gap: 24px; }
-    }
   </style>
 </head>
 <body>
 
-  <!-- NAV -->
-  <nav>
-    <a class="nav-logo" href="#">txntradez <span>indicators</span></a>
-    <ul class="nav-links">
-      <li><a href="#indicators">Indicators</a></li>
-      <li><a href="#how-it-works">How It Works</a></li>
-      <li><a href="#faq">FAQ</a></li>
-    </ul>
-    <a class="nav-cta" href="#pricing">Get Access — $80</a>
-  </nav>
+<canvas id="bg-canvas"></canvas>
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
 
-  <!-- TICKER -->
-  <div class="ticker-wrap" style="margin-top:64px;">
-    <div class="ticker-inner">
-      <span class="ticker-item">ES <span class="up">▲ 0.42%</span></span>
-      <span class="ticker-item">NQ <span class="up">▲ 0.78%</span></span>
-      <span class="ticker-item">SPY <span class="up">▲ 0.31%</span></span>
-      <span class="ticker-item">BTC <span class="down">▼ 1.12%</span></span>
-      <span class="ticker-item">GC <span class="up">▲ 0.55%</span></span>
-      <span class="ticker-item">CL <span class="down">▼ 0.22%</span></span>
-      <span class="ticker-item">AAPL <span class="up">▲ 0.66%</span></span>
-      <span class="ticker-item">TSLA <span class="up">▲ 1.04%</span></span>
-      <span class="ticker-item">QQQ <span class="up">▲ 0.89%</span></span>
-      <span class="ticker-item">DXY <span class="down">▼ 0.14%</span></span>
-      <!-- duplicate for seamless loop -->
-      <span class="ticker-item">ES <span class="up">▲ 0.42%</span></span>
-      <span class="ticker-item">NQ <span class="up">▲ 0.78%</span></span>
-      <span class="ticker-item">SPY <span class="up">▲ 0.31%</span></span>
-      <span class="ticker-item">BTC <span class="down">▼ 1.12%</span></span>
-      <span class="ticker-item">GC <span class="up">▲ 0.55%</span></span>
-      <span class="ticker-item">CL <span class="down">▼ 0.22%</span></span>
-      <span class="ticker-item">AAPL <span class="up">▲ 0.66%</span></span>
-      <span class="ticker-item">TSLA <span class="up">▲ 1.04%</span></span>
-      <span class="ticker-item">QQQ <span class="up">▲ 0.89%</span></span>
-      <span class="ticker-item">DXY <span class="down">▼ 0.14%</span></span>
+<!-- NAV -->
+<nav>
+  <a class="logo" href="#">
+    <span class="logo-dot"></span>
+    txntradez
+  </a>
+  <div class="nav-right">
+    <a class="nav-link" href="#indicators">Indicators</a>
+    <a class="nav-link" href="#pricing">Pricing</a>
+    <a class="nav-link" href="#faq">FAQ</a>
+    <a class="nav-btn" href="#pricing">Get Access — $80</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">Professional Pine Script Indicators</div>
+  <h1 class="hero-h1">
+    <span class="line1">See the Market<span class="dot">.</span></span>
+    <span class="line2"><span class="word-build">Build</span> <span class="word-your">Your</span> <span class="word-edge">Edge</span><span class="dot">.</span></span>
+  </h1>
+  <p class="hero-p">
+    Three precision-built indicators that give you a <strong>different perspective</strong> of the market — so you can identify your own opportunities and build an edge that's truly yours.
+  </p>
+  <div class="hero-ctas">
+    <a class="btn-main" href="#indicators">Explore Indicators</a>
+    <a class="btn-ghost" href="#pricing">Get Access — $80</a>
+  </div>
+  <div class="hero-stats">
+    <div class="hstat">
+      <div class="hstat-val">3</div>
+      <div class="hstat-label">Premium Scripts</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-val"><span>$</span>80</div>
+      <div class="hstat-label">One-Time Fee</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-val">∞</div>
+      <div class="hstat-label">Lifetime Access</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-val">TV</div>
+      <div class="hstat-label">TradingView Ready</div>
     </div>
   </div>
+</section>
 
-  <!-- HERO -->
-  <section class="hero">
-    <div class="hero-glow"></div>
-    <div class="hero-glow2"></div>
-    <div class="hero-badge">Professional Pine Script Indicators</div>
-    <h1>Trade With <em>An Edge.</em></h1>
-    <p class="hero-sub">
-      Three battle-tested indicators built for serious traders. Identify <strong>sessions</strong>, spot <strong>order gaps</strong>, and trade <strong>premium FVGs</strong> with precision.
-    </p>
-    <div class="hero-actions">
-      <a href="#indicators" class="btn-primary">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-        See the Indicators
-      </a>
-      <a href="#pricing" class="btn-secondary">
-        Get Access — $80
-      </a>
-    </div>
-    <div class="hero-stats">
-      <div class="stat">
-        <div class="stat-num">3</div>
-        <div class="stat-label">Premium Scripts</div>
-      </div>
-      <div class="stat">
-        <div class="stat-num">$80</div>
-        <div class="stat-label">One-Time Fee</div>
-      </div>
-      <div class="stat">
-        <div class="stat-num">∞</div>
-        <div class="stat-label">Lifetime Access</div>
-      </div>
-      <div class="stat">
-        <div class="stat-num">TV</div>
-        <div class="stat-label">TradingView Ready</div>
-      </div>
-    </div>
-  </section>
+<!-- INDICATORS -->
+<section class="sec" id="indicators">
+  <div class="wrap">
+    <div class="sec-label">The Arsenal</div>
+    <h2 class="sec-title">Three Tools.<br><span>One System.</span></h2>
+    <div class="ind-grid">
 
-  <!-- INDICATORS -->
-  <section id="indicators">
-    <div style="max-width:1200px;margin:0 auto;padding:100px 24px;">
-      <div class="section-header">
-        <span class="section-tag">The Arsenal</span>
-        <h2 class="section-title">Three Tools. <span>One Edge.</span></h2>
-      </div>
-
-      <!-- INDICATOR 1: Session+ -->
-      <div class="indicator-card">
-        <div class="indicator-visual">
-          <!-- Animated SVG chart placeholder -->
-          <svg class="animated-chart" viewBox="0 0 500 320" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <linearGradient id="grad1" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#00d2ff" stop-opacity="0.2"/>
-                <stop offset="100%" stop-color="#00d2ff" stop-opacity="0"/>
-              </linearGradient>
-            </defs>
-            <!-- Session zones -->
-            <rect x="0" y="0" width="160" height="320" fill="rgba(0,210,255,0.04)" rx="0"/>
-            <rect x="160" y="0" width="190" height="320" fill="rgba(0,255,136,0.04)" rx="0"/>
-            <rect x="350" y="0" width="150" height="320" fill="rgba(240,180,41,0.04)" rx="0"/>
-            <!-- Labels -->
-            <text x="80" y="24" text-anchor="middle" font-family="Space Mono" font-size="9" fill="rgba(0,210,255,0.5)" letter-spacing="2">ASIA</text>
-            <text x="255" y="24" text-anchor="middle" font-family="Space Mono" font-size="9" fill="rgba(0,255,136,0.5)" letter-spacing="2">LONDON</text>
-            <text x="425" y="24" text-anchor="middle" font-family="Space Mono" font-size="9" fill="rgba(240,180,41,0.5)" letter-spacing="2">NEW YORK</text>
-            <!-- Dividers -->
-            <line x1="160" y1="0" x2="160" y2="320" stroke="rgba(0,210,255,0.15)" stroke-width="1" stroke-dasharray="4,4"/>
-            <line x1="350" y1="0" x2="350" y2="320" stroke="rgba(0,210,255,0.15)" stroke-width="1" stroke-dasharray="4,4"/>
-            <!-- Price line -->
-            <polyline points="10,200 40,190 70,195 100,180 130,175 160,165 190,155 220,145 250,140 280,150 310,135 340,130 350,120 370,110 400,105 430,115 460,100 490,90"
-              fill="none" stroke="#00d2ff" stroke-width="2" opacity="0.8"/>
-            <!-- Area fill -->
-            <polygon points="10,200 40,190 70,195 100,180 130,175 160,165 190,155 220,145 250,140 280,150 310,135 340,130 350,120 370,110 400,105 430,115 460,100 490,90 490,320 10,320"
-              fill="url(#grad1)" opacity="0.5"/>
-            <!-- Candles -->
-            <g opacity="0.8">
-              <rect x="30" y="182" width="8" height="16" fill="#00d2ff" rx="1"/>
-              <rect x="60" y="188" width="8" height="12" fill="#ff4466" rx="1"/>
-              <rect x="90" y="175" width="8" height="12" fill="#00d2ff" rx="1"/>
-              <rect x="120" y="170" width="8" height="10" fill="#00d2ff" rx="1"/>
-              <rect x="150" y="160" width="8" height="14" fill="#00d2ff" rx="1"/>
-              <rect x="180" y="150" width="8" height="12" fill="#00d2ff" rx="1"/>
-              <rect x="210" y="140" width="8" height="12" fill="#00d2ff" rx="1"/>
-              <rect x="240" y="138" width="8" height="8" fill="#ff4466" rx="1"/>
-              <rect x="270" y="145" width="8" height="10" fill="#ff4466" rx="1"/>
-              <rect x="300" y="130" width="8" height="12" fill="#00d2ff" rx="1"/>
-              <rect x="330" y="125" width="8" height="10" fill="#00d2ff" rx="1"/>
-              <rect x="360" y="108" width="8" height="14" fill="#00d2ff" rx="1"/>
-              <rect x="390" y="102" width="8" height="10" fill="#ff4466" rx="1"/>
-              <rect x="420" y="110" width="8" height="12" fill="#ff4466" rx="1"/>
-              <rect x="450" y="97" width="8" height="10" fill="#00d2ff" rx="1"/>
-              <rect x="480" y="87" width="8" height="10" fill="#00d2ff" rx="1"/>
+      <!-- 01 Session+ -->
+      <div class="ind-row reveal">
+        <div class="ind-visual">
+          <svg viewBox="0 0 520 340" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+            <rect x="0" y="0" width="173" height="340" fill="rgba(0,229,255,0.03)"/>
+            <rect x="173" y="0" width="200" height="340" fill="rgba(0,255,157,0.03)"/>
+            <rect x="373" y="0" width="147" height="340" fill="rgba(255,200,74,0.03)"/>
+            <line x1="173" y1="0" x2="173" y2="340" stroke="rgba(0,229,255,0.1)" stroke-width="1" stroke-dasharray="4,5"/>
+            <line x1="373" y1="0" x2="373" y2="340" stroke="rgba(0,229,255,0.1)" stroke-width="1" stroke-dasharray="4,5"/>
+            <text x="86" y="22" text-anchor="middle" font-family="DM Mono" font-size="9" fill="rgba(0,229,255,0.4)" letter-spacing="3">ASIA</text>
+            <text x="273" y="22" text-anchor="middle" font-family="DM Mono" font-size="9" fill="rgba(0,255,157,0.4)" letter-spacing="3">LONDON</text>
+            <text x="447" y="22" text-anchor="middle" font-family="DM Mono" font-size="9" fill="rgba(255,200,74,0.4)" letter-spacing="3">NEW YORK</text>
+            <line x1="10" y1="178" x2="168" y2="178" stroke="rgba(0,229,255,0.3)" stroke-width="1" stroke-dasharray="3,4"/>
+            <line x1="10" y1="215" x2="168" y2="215" stroke="rgba(0,229,255,0.3)" stroke-width="1" stroke-dasharray="3,4"/>
+            <line x1="178" y1="148" x2="368" y2="148" stroke="rgba(0,255,157,0.3)" stroke-width="1" stroke-dasharray="3,4"/>
+            <line x1="178" y1="185" x2="368" y2="185" stroke="rgba(0,255,157,0.3)" stroke-width="1" stroke-dasharray="3,4"/>
+            <line x1="378" y1="105" x2="510" y2="105" stroke="rgba(255,200,74,0.3)" stroke-width="1" stroke-dasharray="3,4"/>
+            <line x1="378" y1="140" x2="510" y2="140" stroke="rgba(255,200,74,0.3)" stroke-width="1" stroke-dasharray="3,4"/>
+            <polyline points="10,215 45,205 80,210 115,195 150,188 173,178 210,162 245,152 280,148 315,158 350,142 373,130 410,118 445,108 480,98 510,88" fill="none" stroke="rgba(0,229,255,0.6)" stroke-width="1.5"/>
+            <g opacity="0.75">
+              <rect x="28" y="196" width="9" height="20" fill="#00e5ff" rx="1"/>
+              <line x1="32" y1="190" x2="32" y2="220" stroke="#00e5ff" stroke-width="1.5" opacity="0.5"/>
+              <rect x="62" y="202" width="9" height="14" fill="#ff4d6a" rx="1"/>
+              <rect x="96" y="196" width="9" height="16" fill="#00e5ff" rx="1"/>
+              <rect x="130" y="186" width="9" height="14" fill="#00e5ff" rx="1"/>
+              <rect x="163" y="172" width="9" height="16" fill="#00e5ff" rx="1"/>
+              <rect x="197" y="156" width="9" height="14" fill="#00e5ff" rx="1"/>
+              <rect x="231" y="148" width="9" height="12" fill="#ff4d6a" rx="1"/>
+              <rect x="265" y="152" width="9" height="10" fill="#ff4d6a" rx="1"/>
+              <rect x="299" y="138" width="9" height="14" fill="#00e5ff" rx="1"/>
+              <rect x="333" y="126" width="9" height="14" fill="#00e5ff" rx="1"/>
+              <rect x="367" y="114" width="9" height="16" fill="#00e5ff" rx="1"/>
+              <rect x="401" y="104" width="9" height="14" fill="#ff4d6a" rx="1"/>
+              <rect x="435" y="98" width="9" height="12" fill="#00e5ff" rx="1"/>
+              <rect x="469" y="88" width="9" height="12" fill="#00e5ff" rx="1"/>
             </g>
-            <!-- Session highs/lows -->
-            <line x1="10" y1="175" x2="155" y2="175" stroke="rgba(0,210,255,0.4)" stroke-width="1" stroke-dasharray="3,3"/>
-            <line x1="10" y1="210" x2="155" y2="210" stroke="rgba(0,210,255,0.4)" stroke-width="1" stroke-dasharray="3,3"/>
-            <line x1="165" y1="135" x2="345" y2="135" stroke="rgba(0,255,136,0.4)" stroke-width="1" stroke-dasharray="3,3"/>
-            <line x1="165" y1="165" x2="345" y2="165" stroke="rgba(0,255,136,0.4)" stroke-width="1" stroke-dasharray="3,3"/>
-            <line x1="355" y1="85" x2="495" y2="85" stroke="rgba(240,180,41,0.4)" stroke-width="1" stroke-dasharray="3,3"/>
-            <line x1="355" y1="120" x2="495" y2="120" stroke="rgba(240,180,41,0.4)" stroke-width="1" stroke-dasharray="3,3"/>
           </svg>
-          <div class="upload-zone" id="upload1" onclick="triggerUpload(1)">
-            <div class="upload-icon">📷</div>
-            <p>Drop your <span>screenshot or video</span><br>here to showcase Session+<br><span>click to upload</span></p>
-            <input type="file" id="file1" accept="image/*,video/*" style="display:none" onchange="handleUpload(1,this)">
-          </div>
+
         </div>
-        <div class="indicator-info">
-          <div class="ind-number">// 01</div>
-          <h3 class="ind-name">Session<span>+</span></h3>
-          <div class="ind-tag">@txntradez · TradingView Invite-Only</div>
-          <p class="ind-desc">
-            Automatically maps Asia, London, and New York trading sessions directly on your chart. Highlights session highs and lows, open ranges, and key price levels so you always know when institutional money is moving.
-          </p>
-          <ul class="features-list">
+        <div class="ind-info">
+          <div class="ind-num">// 01 of 03</div>
+          <h3 class="ind-name">Session<em>+</em></h3>
+          <div class="ind-handle">@txntradez · Invite Only</div>
+          <p class="ind-desc">Automatically maps every major trading session directly onto your chart. Know exactly when Asia, London, and New York are active — and where their key price levels sit — without lifting a finger.</p>
+          <ul class="feat-list">
             <li>Auto-plots Asia, London & New York sessions</li>
             <li>Marks session highs, lows & open range</li>
             <li>Customizable colors and session times</li>
             <li>Works on any timeframe and instrument</li>
             <li>Clean, non-cluttered visual display</li>
           </ul>
+          <a href="https://www.tradingview.com/script/uxHdOPoN-Session-txntradez/" target="_blank" class="tv-link">View on TradingView →</a>
         </div>
       </div>
 
-      <!-- INDICATOR 2: NWOG/NDOG+ -->
-      <div class="indicator-card reverse">
-        <div class="indicator-visual">
-          <svg class="animated-chart" viewBox="0 0 500 320" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <linearGradient id="grad2" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#00ff88" stop-opacity="0.15"/>
-                <stop offset="100%" stop-color="#00ff88" stop-opacity="0"/>
-              </linearGradient>
-            </defs>
-            <!-- Background grid lines -->
-            <line x1="0" y1="80" x2="500" y2="80" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
-            <line x1="0" y1="160" x2="500" y2="160" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
-            <line x1="0" y1="240" x2="500" y2="240" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
-            <!-- NWOG zone -->
-            <rect x="60" y="130" width="380" height="40" fill="rgba(0,255,136,0.08)" rx="2"/>
-            <line x1="60" y1="130" x2="440" y2="130" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-dasharray="5,3"/>
-            <line x1="60" y1="170" x2="440" y2="170" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-dasharray="5,3"/>
-            <text x="450" y="146" font-family="Space Mono" font-size="8" fill="rgba(0,255,136,0.7)" letter-spacing="1">NWOG</text>
-            <text x="450" y="158" font-family="Space Mono" font-size="7" fill="rgba(0,255,136,0.5)">4585.50</text>
-            <!-- NDOG zone -->
-            <rect x="80" y="220" width="340" height="30" fill="rgba(240,180,41,0.08)" rx="2"/>
-            <line x1="80" y1="220" x2="420" y2="220" stroke="rgba(240,180,41,0.4)" stroke-width="1" stroke-dasharray="4,3"/>
-            <line x1="80" y1="250" x2="420" y2="250" stroke="rgba(240,180,41,0.4)" stroke-width="1" stroke-dasharray="4,3"/>
-            <text x="430" y="232" font-family="Space Mono" font-size="8" fill="rgba(240,180,41,0.7)" letter-spacing="1">NDOG</text>
-            <!-- Price action approaching NWOG -->
-            <polyline points="10,280 40,270 70,260 100,250 130,240 160,230 190,210 220,200 250,190 280,175 310,165 340,150 370,140 400,135 430,128"
-              fill="none" stroke="white" stroke-width="2" opacity="0.6"/>
-            <!-- Candles -->
-            <g>
-              <rect x="30" y="265" width="7" height="12" fill="#00d2ff" rx="1" opacity="0.8"/>
-              <rect x="65" y="255" width="7" height="12" fill="#00d2ff" rx="1" opacity="0.8"/>
-              <rect x="100" y="244" width="7" height="11" fill="#00d2ff" rx="1" opacity="0.8"/>
-              <rect x="135" y="234" width="7" height="11" fill="#00d2ff" rx="1" opacity="0.8"/>
-              <rect x="170" y="222" width="7" height="14" fill="#00d2ff" rx="1" opacity="0.8"/>
-              <rect x="205" y="203" width="7" height="12" fill="#ff4466" rx="1" opacity="0.8"/>
-              <rect x="240" y="193" width="7" height="10" fill="#00d2ff" rx="1" opacity="0.8"/>
-              <rect x="275" y="178" width="7" height="12" fill="#00d2ff" rx="1" opacity="0.8"/>
-              <rect x="310" y="160" width="7" height="12" fill="#00d2ff" rx="1" opacity="0.8"/>
-              <rect x="345" y="143" width="7" height="13" fill="#ff4466" rx="1" opacity="0.8"/>
-              <rect x="380" y="133" width="7" height="10" fill="#00d2ff" rx="1" opacity="0.8"/>
-              <rect x="415" y="126" width="7" height="9" fill="#00d2ff" rx="1" opacity="0.8"/>
+      <!-- 02 NWOG/NDOG+ -->
+      <div class="ind-row flip reveal" style="transition-delay:0.1s">
+        <div class="ind-visual">
+          <svg viewBox="0 0 520 340" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+            <rect x="60" y="130" width="400" height="42" fill="rgba(0,255,157,0.06)" rx="2"/>
+            <line x1="60" y1="130" x2="460" y2="130" stroke="rgba(0,255,157,0.4)" stroke-width="1.5" stroke-dasharray="5,4"/>
+            <line x1="60" y1="172" x2="460" y2="172" stroke="rgba(0,255,157,0.4)" stroke-width="1.5" stroke-dasharray="5,4"/>
+            <text x="470" y="148" font-family="DM Mono" font-size="9" fill="rgba(0,255,157,0.7)" letter-spacing="2">NWOG</text>
+            <rect x="80" y="222" width="350" height="30" fill="rgba(255,200,74,0.05)" rx="2"/>
+            <line x1="80" y1="222" x2="430" y2="222" stroke="rgba(255,200,74,0.3)" stroke-width="1" stroke-dasharray="4,4"/>
+            <line x1="80" y1="252" x2="430" y2="252" stroke="rgba(255,200,74,0.3)" stroke-width="1" stroke-dasharray="4,4"/>
+            <text x="440" y="240" font-family="DM Mono" font-size="9" fill="rgba(255,200,74,0.6)" letter-spacing="2">NDOG</text>
+            <polyline points="10,290 45,278 80,265 115,252 150,242 185,228 220,210 255,195 290,178 325,162 360,148 395,138 430,128 465,116 500,104" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+            <g opacity="0.8">
+              <rect x="28" y="280" width="9" height="16" fill="#00e5ff" rx="1"/>
+              <rect x="62" y="268" width="9" height="14" fill="#00e5ff" rx="1"/>
+              <rect x="96" y="255" width="9" height="14" fill="#00e5ff" rx="1"/>
+              <rect x="130" y="244" width="9" height="12" fill="#ff4d6a" rx="1"/>
+              <rect x="164" y="230" width="9" height="14" fill="#00e5ff" rx="1"/>
+              <rect x="198" y="212" width="9" height="14" fill="#00e5ff" rx="1"/>
+              <rect x="232" y="197" width="9" height="12" fill="#ff4d6a" rx="1"/>
+              <rect x="266" y="180" width="9" height="14" fill="#00e5ff" rx="1"/>
+              <rect x="300" y="164" width="9" height="14" fill="#00e5ff" rx="1"/>
+              <rect x="334" y="150" width="9" height="12" fill="#00ff9d" rx="1"/>
+              <rect x="368" y="138" width="9" height="14" fill="#00ff9d" rx="1"/>
+              <rect x="402" y="126" width="9" height="14" fill="#00ff9d" rx="1"/>
+              <rect x="436" y="114" width="9" height="14" fill="#00ff9d" rx="1"/>
+              <rect x="470" y="102" width="9" height="12" fill="#00ff9d" rx="1"/>
             </g>
-            <!-- Arrow pointing to gap -->
-            <path d="M 350 100 L 380 130" stroke="rgba(0,255,136,0.6)" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-            <text x="290" y="95" font-family="Space Mono" font-size="9" fill="rgba(0,255,136,0.8)">PRICE TARGETING GAP</text>
           </svg>
-          <div class="upload-zone" id="upload2" onclick="triggerUpload(2)">
-            <div class="upload-icon">📷</div>
-            <p>Drop your <span>screenshot or video</span><br>here to showcase NWOG/NDOG+<br><span>click to upload</span></p>
-            <input type="file" id="file2" accept="image/*,video/*" style="display:none" onchange="handleUpload(2,this)">
-          </div>
+
         </div>
-        <div class="indicator-info">
-          <div class="ind-number">// 02</div>
-          <h3 class="ind-name">NWOG/<span>NDOG+</span></h3>
-          <div class="ind-tag">@txntradez · TradingView Invite-Only</div>
-          <p class="ind-desc">
-            Automatically draws New Week Opening Gaps and New Day Opening Gaps — high-probability price magnets that price loves to revisit. Stop hunting for these manually; let the indicator do it for you.
-          </p>
-          <ul class="features-list">
+        <div class="ind-info">
+          <div class="ind-num">// 02 of 03</div>
+          <h3 class="ind-name">NWOG / <em>NDOG+</em></h3>
+          <div class="ind-handle">@txntradez · Invite Only</div>
+          <p class="ind-desc">Automatically draws New Week and New Day Opening Gaps — high-probability price magnets that institutional order flow constantly revisits. Stop hunting for these manually.</p>
+          <ul class="feat-list">
             <li>Auto-detects weekly and daily opening gaps</li>
             <li>Plots gap zones as clear visual boxes</li>
-            <li>Tracks whether gaps remain open or closed</li>
+            <li>Tracks whether gaps remain open or filled</li>
             <li>Ideal for ICT-based trading methodologies</li>
             <li>Works across all sessions and instruments</li>
           </ul>
+          <a href="https://www.tradingview.com/script/TBdakKor-ICT-NWOG-NDOG-txntradez/" target="_blank" class="tv-link">View on TradingView →</a>
         </div>
       </div>
 
-      <!-- INDICATOR 3: PFVG+ -->
-      <div class="indicator-card">
-        <div class="indicator-visual">
-          <svg class="animated-chart" viewBox="0 0 500 320" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <linearGradient id="grad3" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#b06aff" stop-opacity="0.2"/>
-                <stop offset="100%" stop-color="#b06aff" stop-opacity="0"/>
-              </linearGradient>
-            </defs>
-            <!-- FVG boxes -->
-            <rect x="80" y="95" width="340" height="35" fill="rgba(176,106,255,0.1)" rx="2"/>
-            <line x1="80" y1="95" x2="420" y2="95" stroke="rgba(176,106,255,0.5)" stroke-width="1.5" stroke-dasharray="4,3"/>
-            <line x1="80" y1="130" x2="420" y2="130" stroke="rgba(176,106,255,0.5)" stroke-width="1.5" stroke-dasharray="4,3"/>
-            <text x="430" y="108" font-family="Space Mono" font-size="8" fill="rgba(176,106,255,0.8)" letter-spacing="1">PFVG</text>
-            <text x="430" y="120" font-family="Space Mono" font-size="7" fill="rgba(176,106,255,0.5)">BULL</text>
-
-            <rect x="100" y="210" width="290" height="28" fill="rgba(255,68,102,0.08)" rx="2"/>
-            <line x1="100" y1="210" x2="390" y2="210" stroke="rgba(255,68,102,0.4)" stroke-width="1" stroke-dasharray="4,3"/>
-            <line x1="100" y1="238" x2="390" y2="238" stroke="rgba(255,68,102,0.4)" stroke-width="1" stroke-dasharray="4,3"/>
-            <text x="400" y="221" font-family="Space Mono" font-size="8" fill="rgba(255,68,102,0.7)" letter-spacing="1">PFVG</text>
-            <text x="400" y="233" font-family="Space Mono" font-size="7" fill="rgba(255,68,102,0.5)">BEAR</text>
-
-            <!-- Price moving up into PFVG -->
-            <polyline points="10,280 40,265 70,255 100,248 130,240 160,230 190,215 220,200 250,185 280,165 310,148 340,135 370,120 400,110 430,100"
-              fill="none" stroke="white" stroke-width="2" opacity="0.6"/>
-
-            <!-- Candles -->
-            <g opacity="0.85">
-              <rect x="25" y="272" width="7" height="14" fill="#00d2ff" rx="1"/>
-              <rect x="55" y="258" width="7" height="13" fill="#00d2ff" rx="1"/>
-              <rect x="85" y="248" width="7" height="11" fill="#00d2ff" rx="1"/>
-              <rect x="115" y="240" width="7" height="10" fill="#ff4466" rx="1"/>
-              <rect x="145" y="226" width="7" height="13" fill="#00d2ff" rx="1"/>
-              <rect x="175" y="212" width="7" height="11" fill="#00d2ff" rx="1"/>
-              <rect x="205" y="197" width="7" height="11" fill="#ff4466" rx="1"/>
-              <rect x="235" y="182" width="7" height="12" fill="#00d2ff" rx="1"/>
-              <rect x="265" y="161" width="7" height="13" fill="#00d2ff" rx="1"/>
-              <rect x="295" y="144" width="7" height="12" fill="#00d2ff" rx="1"/>
-              <rect x="325" y="130" width="7" height="12" fill="#00d2ff" rx="1"/>
-              <rect x="355" y="115" width="7" height="12" fill="#b06aff" rx="1"/>
-              <rect x="385" y="105" width="7" height="12" fill="#b06aff" rx="1"/>
-              <rect x="415" y="96" width="7" height="11" fill="#b06aff" rx="1"/>
+      <!-- 03 PFVG+ -->
+      <div class="ind-row reveal" style="transition-delay:0.2s">
+        <div class="ind-visual">
+          <svg viewBox="0 0 520 340" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+            <rect x="10" y="10" width="70" height="18" fill="rgba(0,229,255,0.08)" rx="2"/>
+            <text x="45" y="22" text-anchor="middle" font-family="DM Mono" font-size="8" fill="rgba(0,229,255,0.6)" letter-spacing="2">PREMIUM</text>
+            <rect x="90" y="10" width="72" height="18" fill="rgba(255,77,106,0.08)" rx="2"/>
+            <text x="126" y="22" text-anchor="middle" font-family="DM Mono" font-size="8" fill="rgba(255,77,106,0.5)" letter-spacing="2">DISCOUNT</text>
+            <rect x="70" y="88" width="380" height="38" fill="rgba(176,110,255,0.08)" rx="2"/>
+            <line x1="70" y1="88" x2="450" y2="88" stroke="rgba(176,110,255,0.45)" stroke-width="1.5" stroke-dasharray="5,4"/>
+            <line x1="70" y1="126" x2="450" y2="126" stroke="rgba(176,110,255,0.45)" stroke-width="1.5" stroke-dasharray="5,4"/>
+            <text x="458" y="104" font-family="DM Mono" font-size="8" fill="rgba(176,110,255,0.8)" letter-spacing="1">PFVG</text>
+            <text x="458" y="116" font-family="DM Mono" font-size="7" fill="rgba(176,110,255,0.5)">BULL</text>
+            <rect x="90" y="215" width="310" height="30" fill="rgba(255,77,106,0.06)" rx="2"/>
+            <line x1="90" y1="215" x2="400" y2="215" stroke="rgba(255,77,106,0.35)" stroke-width="1" stroke-dasharray="4,4"/>
+            <line x1="90" y1="245" x2="400" y2="245" stroke="rgba(255,77,106,0.35)" stroke-width="1" stroke-dasharray="4,4"/>
+            <text x="408" y="228" font-family="DM Mono" font-size="8" fill="rgba(255,77,106,0.65)" letter-spacing="1">PFVG</text>
+            <text x="408" y="240" font-family="DM Mono" font-size="7" fill="rgba(255,77,106,0.4)">BEAR</text>
+            <polyline points="10,290 50,275 90,262 130,248 170,232 210,215 250,198 290,178 330,158 370,138 410,118 450,100 490,84" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+            <g opacity="0.8">
+              <rect x="28" y="278" width="9" height="18" fill="#00e5ff" rx="1"/>
+              <rect x="66" y="264" width="9" height="16" fill="#00e5ff" rx="1"/>
+              <rect x="104" y="250" width="9" height="16" fill="#ff4d6a" rx="1"/>
+              <rect x="142" y="236" width="9" height="14" fill="#00e5ff" rx="1"/>
+              <rect x="180" y="218" width="9" height="16" fill="#00e5ff" rx="1"/>
+              <rect x="218" y="202" width="9" height="14" fill="#ff4d6a" rx="1"/>
+              <rect x="256" y="182" width="9" height="16" fill="#00e5ff" rx="1"/>
+              <rect x="294" y="162" width="9" height="16" fill="#00e5ff" rx="1"/>
+              <rect x="332" y="142" width="9" height="16" fill="#b06aff" rx="1"/>
+              <rect x="370" y="122" width="9" height="16" fill="#b06aff" rx="1"/>
+              <rect x="408" y="104" width="9" height="16" fill="#b06aff" rx="1"/>
+              <rect x="446" y="86" width="9" height="16" fill="#b06aff" rx="1"/>
+              <rect x="484" y="70" width="9" height="16" fill="#b06aff" rx="1"/>
             </g>
-
-            <!-- Premium label -->
-            <rect x="10" y="10" width="80" height="20" fill="rgba(176,106,255,0.15)" rx="3"/>
-            <text x="50" y="23" text-anchor="middle" font-family="Space Mono" font-size="9" fill="rgba(176,106,255,0.9)" letter-spacing="1">PREMIUM</text>
-            <rect x="100" y="10" width="80" height="20" fill="rgba(255,68,102,0.1)" rx="3"/>
-            <text x="140" y="23" text-anchor="middle" font-family="Space Mono" font-size="9" fill="rgba(255,68,102,0.7)" letter-spacing="1">DISCOUNT</text>
           </svg>
-          <div class="upload-zone" id="upload3" onclick="triggerUpload(3)">
-            <div class="upload-icon">📷</div>
-            <p>Drop your <span>screenshot or video</span><br>here to showcase PFVG+<br><span>click to upload</span></p>
-            <input type="file" id="file3" accept="image/*,video/*" style="display:none" onchange="handleUpload(3,this)">
-          </div>
+
         </div>
-        <div class="indicator-info">
-          <div class="ind-number">// 03</div>
-          <h3 class="ind-name">PFVG<span>+</span></h3>
-          <div class="ind-tag">@txntradez · TradingView Invite-Only</div>
-          <p class="ind-desc">
-            Identifies Premium and Discount Fair Value Gaps — the most powerful price inefficiencies in the market. Know exactly where institutional orders are waiting and whether price is in a premium or discount array before you pull the trigger.
-          </p>
-          <ul class="features-list">
+        <div class="ind-info">
+          <div class="ind-num">// 03 of 03</div>
+          <h3 class="ind-name">PFVG<em>+</em></h3>
+          <div class="ind-handle">@txntradez · Invite Only</div>
+          <p class="ind-desc">Identifies Premium and Discount Fair Value Gaps with surgical precision. Know where institutional orders are resting and whether price is trading in a premium or discount array before you enter.</p>
+          <ul class="feat-list">
             <li>Auto-detects bullish & bearish FVG zones</li>
             <li>Labels premium vs. discount arrays instantly</li>
-            <li>Highlights untapped FVGs with high-probability</li>
-            <li>Built on ICT & Smart Money concepts</li>
-            <li>Works on all timeframes for multi-TF analysis</li>
+            <li>Highlights untapped FVGs with high probability</li>
+            <li>Built on ICT & Smart Money Concepts</li>
+            <li>Multi-timeframe compatible</li>
           </ul>
+          <a href="https://www.tradingview.com/script/xVJmzunY-ICT-PFVG-txntradez/" target="_blank" class="tv-link">View on TradingView →</a>
         </div>
       </div>
 
     </div>
-  </section>
+  </div>
+</section>
 
-  <div class="divider"></div>
+<hr class="div">
 
-  <!-- HOW IT WORKS -->
-  <section id="how-it-works">
-    <div class="section-header">
-      <span class="section-tag">Process</span>
-      <h2 class="section-title">Getting <span>Access</span></h2>
-    </div>
-    <div class="steps">
+<!-- HOW IT WORKS -->
+<section class="sec" id="how-it-works">
+  <div class="wrap">
+    <div class="sec-label">Process</div>
+    <h2 class="sec-title reveal">Getting <span>Access</span></h2>
+    <div class="steps reveal">
       <div class="step">
-        <div class="step-num">1</div>
+        <div class="step-n">01 —</div>
         <div class="step-title">Send Payment</div>
         <p class="step-desc">Send <strong>$80</strong> via Venmo to <strong>@txntradez</strong></p>
       </div>
       <div class="step">
-        <div class="step-num">2</div>
-        <div class="step-title">Add Your Username</div>
-        <p class="step-desc">Include your <strong>TradingView username</strong> in the Venmo memo field</p>
+        <div class="step-n">02 —</div>
+        <div class="step-title">Add Username</div>
+        <p class="step-desc">Include your <strong>TradingView username</strong> in the memo field</p>
       </div>
       <div class="step">
-        <div class="step-num">3</div>
+        <div class="step-n">03 —</div>
         <div class="step-title">Get Invited</div>
-        <p class="step-desc">Access is granted within <strong>24 hours</strong> to all 3 indicators</p>
+        <p class="step-desc">Access granted within <strong>24 hours</strong> to all 3 scripts</p>
       </div>
       <div class="step">
-        <div class="step-num">4</div>
+        <div class="step-n">04 —</div>
         <div class="step-title">Start Trading</div>
-        <p class="step-desc">Add indicators to any chart and trade with a <strong>real edge</strong></p>
+        <p class="step-desc">Add to any chart and trade with a <strong>real edge</strong></p>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <div class="divider" style="margin-top:80px;"></div>
+<hr class="div">
 
-  <!-- PRICING -->
-  <section id="pricing">
-    <div style="max-width:800px;margin:0 auto;padding:100px 24px;">
-      <div class="section-header">
-        <span class="section-tag">Pricing</span>
-        <h2 class="section-title">One Price. <span>Everything Included.</span></h2>
-      </div>
-      <div class="pricing-card">
-        <div class="pricing-glow"></div>
-        <div class="pricing-label">Full Access Bundle</div>
-        <div class="pricing-amount"><sup>$</sup>80</div>
-        <div class="pricing-term">One-Time Payment · Lifetime Access</div>
-        <div class="pricing-includes">
-          <div class="pricing-item">Session+ Indicator</div>
-          <div class="pricing-item">NWOG/NDOG+ Indicator</div>
-          <div class="pricing-item">PFVG+ Indicator</div>
-          <div class="pricing-item">All Future Updates</div>
-          <div class="pricing-item">TradingView Invite Access</div>
-          <div class="pricing-item">Use On Any Chart</div>
-        </div>
-        <a href="#payment" class="btn-primary" style="display:inline-flex;justify-content:center;width:100%;max-width:360px;">
-          Pay via Venmo — Get Instant Access
-        </a>
-        <p style="font-family:var(--font-mono);font-size:11px;color:var(--text3);margin-top:16px;letter-spacing:0.08em;">
-          NO SUBSCRIPTION · NO RENEWAL · PAY ONCE
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- PAYMENT -->
-  <section id="payment">
-    <div style="max-width:700px;margin:0 auto;padding:0 24px 100px;">
-      <div class="section-header">
-        <span class="section-tag">Payment</span>
-        <h2 class="section-title">Pay via <span>Venmo</span></h2>
-      </div>
-      <div class="venmo-card">
-        <div class="venmo-logo-area">
-          <div class="venmo-icon">V</div>
-          <div class="venmo-name">Venmo</div>
-        </div>
-        <div class="venmo-handle">@txntradez</div>
-
-        <div class="venmo-instructions">
-          <div class="instruction-row">
-            <span class="instruction-num">01</span>
-            <span class="instruction-text">Open Venmo and search for <strong>@txntradez</strong></span>
-          </div>
-          <div class="instruction-row">
-            <span class="instruction-num">02</span>
-            <span class="instruction-text">Send exactly <strong>$80.00</strong> — select the business account</span>
-          </div>
-          <div class="instruction-row">
-            <span class="instruction-num">03</span>
-            <span class="instruction-text">In the memo/note field, type your <strong>TradingView username</strong> (this is required to grant you access)</span>
-          </div>
-          <div class="instruction-row">
-            <span class="instruction-num">04</span>
-            <span class="instruction-text">Access to all 3 indicators will be granted within <strong>24 hours</strong> — check your TradingView notifications</span>
-          </div>
-        </div>
-
-        <div class="important-note">
-          <span class="icon">⚠</span>
-          <p><strong>Important:</strong> You must include your TradingView username in the payment memo. Without it, we cannot grant access. If you have any issues, DM <strong>@txntradez</strong> on TradingView with your payment confirmation.</p>
+<!-- PRICING -->
+<section class="sec" id="pricing">
+  <div class="wrap">
+    <div class="sec-label">Pricing</div>
+    <h2 class="sec-title reveal">One Price. <span>Everything.</span></h2>
+    <div class="pricing-wrap reveal">
+      <div class="pricing-left">
+        <div class="sec-label" style="margin-bottom:0">Full Bundle</div>
+        <div class="price-tag"><sup>$</sup>80</div>
+        <div class="price-term">One-Time · No Subscription · Lifetime Access</div>
+        <div class="price-includes">
+          <div class="pi"><span class="pi-check">✓</span> Session+ Indicator</div>
+          <div class="pi"><span class="pi-check">✓</span> NWOG / NDOG+ Indicator</div>
+          <div class="pi"><span class="pi-check">✓</span> PFVG+ Indicator</div>
+          <div class="pi"><span class="pi-check">✓</span> All Future Updates Included</div>
+          <div class="pi"><span class="pi-check">✓</span> TradingView Invite Access</div>
+          <div class="pi"><span class="pi-check">✓</span> Use On Any Chart or Instrument</div>
         </div>
       </div>
+      <div class="pricing-right">
+        <div class="venmo-badge">V</div>
+        <div style="font-family:var(--ff-head);font-size:13px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text2);">Pay via Venmo</div>
+        <div class="venmo-handle-big">@txntradez</div>
+        <p class="venmo-note">Include your <strong>TradingView username</strong> in the memo — access granted within 24 hours.</p>
+        <a href="https://venmo.com/txntradez" target="_blank" class="btn-main" style="width:100%;text-align:center;display:block;padding:16px;">Open Venmo</a>
+      </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <div class="divider"></div>
+<hr class="div">
 
-  <!-- FAQ -->
-  <section id="faq">
-    <div class="section-header">
-      <span class="section-tag">FAQ</span>
-      <h2 class="section-title">Common <span>Questions</span></h2>
+<!-- PAYMENT DETAILS -->
+<section class="sec" id="payment">
+  <div class="wrap">
+    <div class="sec-label">Payment Instructions</div>
+    <h2 class="sec-title reveal">Step by <span>Step</span></h2>
+    <div class="pay-steps reveal">
+      <div class="pay-step">
+        <span class="pay-n">01</span>
+        <span class="pay-text">Open Venmo and search for <strong>@txntradez</strong> — make sure you select the business account</span>
+      </div>
+      <div class="pay-step">
+        <span class="pay-n">02</span>
+        <span class="pay-text">Send exactly <strong>$80.00</strong> as the payment amount</span>
+      </div>
+      <div class="pay-step">
+        <span class="pay-n">03</span>
+        <span class="pay-text">In the memo/note field, type your <strong>TradingView username</strong> — this is required to grant access</span>
+      </div>
+      <div class="pay-step">
+        <span class="pay-n">04</span>
+        <span class="pay-text">Access to all 3 indicators will be granted within <strong>24 hours</strong> — check your TradingView notifications</span>
+      </div>
     </div>
-
-    <div class="faq-item">
-      <div class="faq-q">Do I need a paid TradingView plan?</div>
-      <div class="faq-a">No! These indicators work with a free TradingView account. You just need to be invited to each script, which happens when you complete your Venmo payment with your username in the memo.</div>
+    <div class="warn-box reveal">
+      <span class="warn-icon">⚠</span>
+      <p class="warn-text"><strong>Important:</strong> You must include your TradingView username in the payment memo. Without it, access cannot be granted. If you have issues, DM <strong>@txntradez</strong> on TradingView with your payment confirmation.</p>
     </div>
+  </div>
+</section>
 
-    <div class="faq-item">
-      <div class="faq-q">How long until I get access after paying?</div>
-      <div class="faq-a">Access is typically granted within 24 hours of receiving your payment. You'll receive a TradingView notification when the invite is sent. If you haven't heard back after 24 hours, DM @txntradez on TradingView with your payment confirmation.</div>
+<hr class="div">
+
+<!-- FAQ -->
+<section class="sec" id="faq">
+  <div class="wrap">
+    <div class="sec-label">FAQ</div>
+    <h2 class="sec-title reveal">Common <span>Questions</span></h2>
+    <div class="faq-list reveal">
+      <div class="faq-item">
+        <button class="faq-q">Do I need a paid TradingView plan? <span class="faq-icon">+</span></button>
+        <div class="faq-a">No — these indicators work with a free TradingView account. You just need to be invited to each script, which happens automatically within 24 hours of your Venmo payment.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">How long until I get access after paying? <span class="faq-icon">+</span></button>
+        <div class="faq-a">Access is typically granted within 24 hours. You'll get a TradingView notification when the invite is sent. If you haven't heard back after 24 hours, DM @txntradez on TradingView with your payment confirmation.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">What markets do these indicators work on? <span class="faq-icon">+</span></button>
+        <div class="faq-a">All three indicators work on any market available on TradingView — stocks, futures (ES, NQ, MNQ), forex, crypto, and more. They work on any timeframe as well.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Is this a subscription or one-time payment? <span class="faq-icon">+</span></button>
+        <div class="faq-a">Completely one-time. Pay $80 once and have lifetime access to all 3 indicators including any future updates. No monthly fees, no renewals.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Can I share the indicators with others? <span class="faq-icon">+</span></button>
+        <div class="faq-a">No — these are invite-only private scripts. Access is granted to your TradingView account only and cannot be transferred or shared. Each person needs to purchase their own license.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">What trading style are these built for? <span class="faq-icon">+</span></button>
+        <div class="faq-a">These indicators are built around ICT and Smart Money Concepts — sessions, liquidity, order flow, and fair value gaps. They're especially powerful for day traders and scalpers on the 1m–15m timeframes.</div>
+      </div>
     </div>
+  </div>
+</section>
 
-    <div class="faq-item">
-      <div class="faq-q">What markets do these indicators work on?</div>
-      <div class="faq-a">All three indicators work on any market available on TradingView — stocks, futures (ES, NQ, MNQ), forex, crypto, and more. They're built to work on any timeframe as well.</div>
-    </div>
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">txntradez</div>
+  <p class="footer-disc">Trading involves significant risk of loss. These indicators are tools for technical analysis and do not constitute financial advice. Past performance does not guarantee future results.</p>
+  <div class="footer-socials">
+    <a href="https://twitter.com/txntradez" target="_blank" class="social-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      @txntradez
+    </a>
+    <a href="https://youtube.com/@txntradez" target="_blank" class="social-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+      @txntradez
+    </a>
+    <a href="https://www.tradingview.com/u/txntradez/" target="_blank" class="social-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v2H4zm0 4h10v2H4zm0 4h16v2H4zm0 4h10v2H4z"/></svg>
+      TradingView
+    </a>
+  </div>
+  <div class="footer-right">© 2026 txntradez</div>
+</footer>
 
-    <div class="faq-item">
-      <div class="faq-q">Is this a subscription or one-time payment?</div>
-      <div class="faq-a">Completely one-time. You pay $80 once and have lifetime access to all 3 indicators including any future updates. No monthly fees, no renewals.</div>
-    </div>
+<script>
+  // Custom cursor
+  const cur = document.getElementById('cursor');
+  const ring = document.getElementById('cursor-ring');
+  let mx = 0, my = 0, rx = 0, ry = 0;
 
-    <div class="faq-item">
-      <div class="faq-q">Can I share the indicators with others?</div>
-      <div class="faq-a">No — these are invite-only private scripts. Access is granted to your TradingView account only and cannot be transferred or shared. Each person who wants access needs to purchase their own license.</div>
-    </div>
+  document.addEventListener('mousemove', e => {
+    mx = e.clientX; my = e.clientY;
+    cur.style.left = mx + 'px';
+    cur.style.top  = my + 'px';
+  });
 
-    <div class="faq-item">
-      <div class="faq-q">What trading style are these built for?</div>
-      <div class="faq-a">These indicators are built around ICT (Inner Circle Trader) and Smart Money Concepts — sessions, liquidity, order flow, and fair value gaps. They're especially powerful for day traders and scalpers on the 1m–15m timeframes.</div>
-    </div>
+  function lerpCursor() {
+    rx += (mx - rx) * 0.12;
+    ry += (my - ry) * 0.12;
+    ring.style.left = rx + 'px';
+    ring.style.top  = ry + 'px';
+    requestAnimationFrame(lerpCursor);
+  }
+  lerpCursor();
 
-  </section>
-
-  <!-- FOOTER -->
-  <footer>
-    <div class="footer-logo">txntradez</div>
-    <div class="footer-sub">PROFESSIONAL PINE SCRIPT INDICATORS · TRADINGVIEW</div>
-    <p class="footer-disclaimer">
-      Trading involves significant risk of loss. These indicators are tools for technical analysis and do not constitute financial advice. Past performance does not guarantee future results. Trade responsibly.
-    </p>
-  </footer>
-
-  <script>
-    // FAQ toggle
-    document.querySelectorAll('.faq-q').forEach(q => {
-      q.addEventListener('click', () => {
-        const item = q.parentElement;
-        const wasOpen = item.classList.contains('open');
-        document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
-        if (!wasOpen) item.classList.add('open');
-      });
+  document.querySelectorAll('a,button').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      cur.style.width = '20px'; cur.style.height = '20px';
+      ring.style.width = '56px'; ring.style.height = '56px';
     });
-
-    // Upload handlers
-    function triggerUpload(n) {
-      document.getElementById('file' + n).click();
-    }
-
-    function handleUpload(n, input) {
-      const file = input.files[0];
-      if (!file) return;
-      const zone = document.getElementById('upload' + n);
-      const url = URL.createObjectURL(file);
-
-      if (file.type.startsWith('video/')) {
-        zone.innerHTML = `<video src="${url}" autoplay muted loop playsinline style="width:100%;height:100%;object-fit:cover;border-radius:4px;"></video>
-          <div style="position:absolute;bottom:12px;right:12px;background:rgba(0,0,0,0.7);border:1px solid rgba(0,210,255,0.3);padding:4px 10px;border-radius:3px;font-family:var(--font-mono);font-size:10px;color:var(--accent);letter-spacing:0.08em;">VIDEO DEMO</div>`;
-      } else {
-        zone.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" alt="Indicator screenshot">
-          <div style="position:absolute;bottom:12px;right:12px;background:rgba(0,0,0,0.7);border:1px solid rgba(0,210,255,0.3);padding:4px 10px;border-radius:3px;font-family:var(--font-mono);font-size:10px;color:var(--accent);letter-spacing:0.08em;">LIVE CHART</div>`;
-      }
-      zone.style.border = 'none';
-      zone.style.background = 'transparent';
-      zone.style.cursor = 'default';
-    }
-
-    // Scroll reveal
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(e => {
-        if (e.isIntersecting) {
-          e.target.style.opacity = '1';
-          e.target.style.transform = 'translateY(0)';
-        }
-      });
-    }, { threshold: 0.1 });
-
-    document.querySelectorAll('.indicator-card, .pricing-card, .venmo-card, .step').forEach(el => {
-      el.style.opacity = '0';
-      el.style.transform = 'translateY(32px)';
-      el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-      observer.observe(el);
+    el.addEventListener('mouseleave', () => {
+      cur.style.width = '10px'; cur.style.height = '10px';
+      ring.style.width = '36px'; ring.style.height = '36px';
     });
-  </script>
+  });
+
+  // Canvas background particles
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [];
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  for (let i = 0; i < 60; i++) {
+    particles.push({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      r: Math.random() * 1.5 + 0.3,
+      vx: (Math.random() - 0.5) * 0.15,
+      vy: (Math.random() - 0.5) * 0.15,
+      a: Math.random() * 0.5 + 0.1
+    });
+  }
+
+  function drawCanvas() {
+    ctx.clearRect(0, 0, W, H);
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0) p.x = W;
+      if (p.x > W) p.x = 0;
+      if (p.y < 0) p.y = H;
+      if (p.y > H) p.y = 0;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(0,229,255,${p.a})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(drawCanvas);
+  }
+  drawCanvas();
+
+  // Scroll reveal
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.reveal, .ind-row').forEach(el => obs.observe(el));
+
+  // FAQ
+  document.querySelectorAll('.faq-q').forEach(q => {
+    q.addEventListener('click', () => {
+      const item = q.parentElement;
+      const open = item.classList.contains('open');
+      document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+      if (!open) item.classList.add('open');
+    });
+  });
+
+
+</script>
 </body>
 </html>
