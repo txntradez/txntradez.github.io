@@ -1012,14 +1012,25 @@
     @media (max-width: 900px) {
       nav { padding: 0 24px; }
       .nav-right .nav-link { display: none; }
-      .ind-row { grid-template-columns: 1fr; }
+      .ind-row { grid-template-columns: 1fr; display: flex; flex-direction: column; }
       .ind-row.flip { direction: ltr; }
+      /* Force photo always on top, info always below on mobile */
+      .ind-row .ind-visual { order: 1; }
+      .ind-row .ind-info   { order: 2; }
+      .ind-row.flip .ind-visual { order: 1; }
+      .ind-row.flip .ind-info   { order: 2; }
       .ind-info { padding: 36px 28px; }
       .pricing-wrap { grid-template-columns: 1fr; }
       .steps { grid-template-columns: 1fr 1fr; }
       .hero-stats { position: relative; border-top: 1px solid var(--border); }
       footer { flex-direction: column; text-align: center; }
       .footer-disc { text-align: center; }
+      .about-grid { grid-template-columns: 1fr; gap: 40px; }
+      .about-left { position: static; }
+      .hero-h1 { font-size: clamp(32px, 8vw, 56px); }
+      .ind-visual { min-height: 260px; }
+      .pricing-card { padding: 32px 24px; }
+      .steps { grid-template-columns: 1fr 1fr; gap: 1px; }
     }
     /* ── ABOUT ── */
     .about-grid {
